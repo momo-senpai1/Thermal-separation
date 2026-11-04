@@ -70,6 +70,9 @@ describe('batch rectification, constant purity', () => {
     for (let i = 1; i < r.points.length; i++) expect(r.points[i]!.v).toBeGreaterThanOrEqual(r.points[i - 1]!.v - 1e-9);
     expect(r.endReason).toMatch(/can no longer be held/);
   });
+  it('interpolated states keep x̄_D = x_D exactly', () => {
+    for (const d of [0.1, 0.27, 0.4]) expect(batchAt(r.points, d, 'constant-purity').xDavg).toBeCloseTo(0.95, 12);
+  });
   it('L/L₀ = (x_D − x₀)/(x_D − x_W)', () => {
     const p = r.points[Math.floor(r.points.length / 2)]!;
     expect(p.s).toBeCloseTo((0.95 - 0.5) / (0.95 - p.xW), 12);

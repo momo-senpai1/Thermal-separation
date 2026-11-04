@@ -84,3 +84,27 @@ describe('reactivity — upstream slider changes reach downstream streams', () =
     expect(Object.keys(u).sort()).toEqual(['id', 'params', 'state', 'type']);
   });
 });
+
+describe('batch still equipment', () => {
+  it('solves a charge into receiver and residue that close the balance', () => {
+    st().addUnit('feed', { x: 0, y: 600 });
+    st().addUnit('batch', { x: 300, y: 600 });
+    const f = st().nodes.filter((n) => n.type === 'feed').at(-1)!;
+    const b = st().nodes.find((n) => n.type === 'batch')!;
+    st().onConnect({ source: f.id, sourceHandle: 'out', target: b.id, targetHandle: 'charge' });
+    const still = st().nodes.find((n) => n.id === b.id)!;
+    expect(still.data.diag?.status).toBe('ok');
+    const { topProduct: D, bottomProduct: W } = still.data.state;
+    const F = f.data.state.topProduct!;
+    expect(D!.flowRate + W!.flowRate).toBeCloseTo(F.flowRate, 9);
+    expect(D!.flowRate * D!.molarFractions.compA + W!.flowRate * W!.molarFractions.compA).toBeCloseTo(
+      F.flowRate * F.molarFractions.compA,
+      6,
+    );
+    expect(D!.molarFractions.compA).toBeGreaterThan(F.molarFractions.compA);
+    // switching to open distillation gives a leaner receiver
+    const xCol = D!.molarFractions.compA;
+    st().updateNodeParams(b.id, { batchMode: 'rayleigh' });
+    expect(st().nodes.find((n) => n.id === b.id)!.data.state.topProduct!.molarFractions.compA).toBeLessThan(xCol);
+  });
+});

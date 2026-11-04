@@ -20,7 +20,7 @@ npm run dev       # dev server with hot reload → http://localhost:5173
 | Command | What it does |
 |---|---|
 | `npm run dev` | Development server with hot reload |
-| `npm test` | Unit + integration tests (vitest, 44 tests) |
+| `npm test` | Unit + integration tests (vitest, 95 tests) |
 | `npm run typecheck` | Strict TypeScript check |
 | `npm run build` | Type-check + production bundle in `dist/` |
 | `npm run preview` | Serve the production build → http://localhost:4173 |
@@ -50,6 +50,46 @@ The base path comes from `VITE_BASE` (set automatically by the workflow).
 | 3 | Engine ↔ UI: unit solve in topological order, live stream propagation | ✅ |
 | 4 | McCabe–Thiele side panel (Tremor/Recharts) on column selection | ✅ |
 
+## Modules
+
+The header switches between modules (hash routes, so links work on static hosting):
+
+| Route | Module |
+|---|---|
+| `#/flowsheet` | P&ID flowsheet: feeds, mixer, heater, distillation column, **batch still** |
+| `#/mccabe-thiele` | McCabe–Thiele design workbench |
+| `#/batch` | Batch distillation workbench |
+
+Planned: distillation lines (ternary), extraction, absorption, crystallization.
+
+### McCabe–Thiele workbench (`engine/mtDesign.ts`)
+
+- **VLE systems** (`engine/vle/systems.ts`): constant α; benzene/toluene and
+  n-hexane/n-heptane (Raoult); methanol/water (Perry's datasheet); ethanol/water
+  and isopropanol/water (Van Laar — azeotropes at x ≈ 0.91 and 0.66, validated
+  against literature).
+- **Calculation targets:** number of stages (fractional last stage), bottoms
+  x_B for a given N, distillate x_D for a given N.
+- **Murphree efficiency** on pseudo-equilibrium curves (kinked at the section switch).
+- **Fixed feed stage** with dashed operating-line extensions; pinch and
+  "feed below the column end" detection.
+- **Azeotropes:** specifications must lie on one side; above the azeotrope the
+  column is solved mirrored (x′ = 1 − x) and drawn under the diagonal.
+- **Shortcuts (constant α):** Fenske N_min, Underwood v_min (binary, exact θ),
+  Gilliland via Liddle's fit (slide misprints corrected) with an N–v chart,
+  asymptotes and the 1.05–1.5·v_min design band.
+- The unit tests reproduce every reference value of the workbench specification
+  (N = 15.01, v_min = 2.123, Gilliland 15.62, the feed-stage table, Murphree cases, …).
+
+### Batch distillation workbench (`engine/batch.ts`)
+
+Open distillation (Rayleigh), batch rectification at constant reflux and at
+constant distillate purity. Play / scrub the batch progress D/L₀; the y–x
+construction, still / instantaneous / collected compositions, reflux, boil-up
+and recovery follow. The flowsheet's **batch still** uses the same engine
+(inlet = charge per cycle, outlets = receiver and residue at the chosen cut) and
+can open the workbench pre-filled.
+
 ## Data contract
 
 Defined in `src/types/process.ts`. Internal units: kmol/h, **K**, kPa, kW
@@ -60,8 +100,8 @@ Defined in `src/types/process.ts`. Internal units: kmol/h, **K**, kPa, kW
 { id, source, target, flowRate, temperature, pressure, vaporFraction /* q */, molarFractions: { compA, compB } }
 
 // Unit operation (node)
-{ id, type: 'feed' | 'mixer' | 'heater' | 'distillation',
-  params: { theoreticalStages, refluxRatio, heatDuty, condenserType?, distillateToFeed?, feedSpec? },
+{ id, type: 'feed' | 'mixer' | 'heater' | 'distillation' | 'batch',
+  params: { theoreticalStages, refluxRatio, heatDuty, condenserType?, distillateToFeed?, feedSpec?, batchMode?, distilledFraction? },
   state:  { topProduct, bottomProduct } }
 ```
 

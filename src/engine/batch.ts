@@ -165,8 +165,11 @@ export function simulateBatch(spec: BatchSpec): BatchResult {
   return { ok: true, endReason, points: pts };
 }
 
-/** Interpolate the batch trajectory at a distilled fraction d = D/L₀. */
-export function batchAt(points: BatchPoint[], d: number): BatchPoint {
+/**
+ * Interpolate the batch trajectory at a distilled fraction d = D/L₀.
+ * For constant purity the still follows exactly from x_W = x_D − (x_D − x₀)/s.
+ */
+export function batchAt(points: BatchPoint[], d: number, mode?: BatchMode): BatchPoint {
   if (points.length === 0) throw new RangeError('empty trajectory');
   if (d <= points[0]!.d) return points[0]!;
   const last = points.at(-1)!;
@@ -177,14 +180,37 @@ export function batchAt(points: BatchPoint[], d: number): BatchPoint {
   const b = points[i]!;
   const t = (d - a.d) / (b.d - a.d);
   const lerp = (p: number, q: number) => p + t * (q - p);
+  const x0 = points[0]!.xW;
+  const s = 1 - d;
+  const pure = mode === 'constant-purity';
+  const xW = pure ? a.xD - (a.xD - x0) / s : lerp(a.xW, b.xW);
+  // the receiver follows from the light-key balance, so it closes exactly
+  const xDavg = pure ? a.xD : (x0 - s * xW) / d;
   return {
-    s: lerp(a.s, b.s),
+    s,
     d,
-    xW: lerp(a.xW, b.xW),
+    xW,
     xD: lerp(a.xD, b.xD),
-    xDavg: lerp(a.xDavg, b.xDavg),
+    xDavg,
     v: lerp(a.v, b.v),
     boilup: lerp(a.boilup, b.boilup),
-    recovery: lerp(a.recovery, b.recovery),
+    recovery: (d * xDavg) / x0,
   };
+}
+
+/** Staircase geometry for the current instant: (x_D, x_D) → N steps → still. */
+export function batchStaircase(y: (x: number) => number, xD: number, v: number, N: number) {
+  const a = v / (v + 1);
+  const path: { x: number; y: number }[] = [{ x: xD, y: xD }];
+  const corners: { x: number; y: number; stage: number }[] = [];
+  let yn = xD;
+  let x = xD;
+  for (let n = 1; n <= N; n++) {
+    x = inverse(y, yn, x);
+    path.push({ x, y: yn });
+    corners.push({ x, y: yn, stage: n });
+    yn = a * x + (1 - a) * xD;
+    if (n < N) path.push({ x, y: yn });
+  }
+  return { path, corners, xW: x };
 }

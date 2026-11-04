@@ -33,6 +33,7 @@ const TAG_SERIES: Record<UnitType, { prefix: string; base: number; label: string
   mixer: { prefix: 'M', base: 200, label: 'Mixer' },
   heater: { prefix: 'E', base: 300, label: 'Heater' },
   distillation: { prefix: 'T', base: 400, label: 'Distillation Column' },
+  batch: { prefix: 'B', base: 500, label: 'Batch Still' },
 };
 
 const DEFAULT_PARAMS: Record<UnitType, UnitParams> = {
@@ -45,6 +46,13 @@ const DEFAULT_PARAMS: Record<UnitType, UnitParams> = {
     heatDuty: 0,
     condenserType: 'total',
     distillateToFeed: 0.42,
+  },
+  batch: {
+    theoreticalStages: 5,
+    refluxRatio: 3,
+    heatDuty: 0,
+    batchMode: 'constant-reflux',
+    distilledFraction: 0.45,
   },
 };
 
@@ -112,7 +120,7 @@ function solve(nodes: UnitNode[], edges: StreamEdge[]) {
     if (!u) return n;
     // a feed keeps its user specification even if evaluation failed
     const state = n.type === 'feed' && !u.state.topProduct ? n.data.state : u.state;
-    return { ...n, data: { ...n.data, state, diag: u.diag, column: u.column } };
+    return { ...n, data: { ...n.data, state, diag: u.diag, column: u.column, batch: u.batch } };
   });
   const solvedEdges = edges.map((e) => {
     const cond = sol.streams.get(e.id) ?? null;
