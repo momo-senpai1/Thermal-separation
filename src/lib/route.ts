@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
-export type Route = 'flowsheet' | 'mccabe-thiele' | 'batch' | 'distillation-lines';
-const ROUTES: readonly Route[] = ['flowsheet', 'mccabe-thiele', 'batch', 'distillation-lines'];
+export type Route = 'flowsheet' | 'mccabe-thiele' | 'batch' | 'distillation-lines' | 'extraction';
+const ROUTES: readonly Route[] = ['flowsheet', 'mccabe-thiele', 'batch', 'distillation-lines', 'extraction'];
 
 function parse(): { route: Route; params: URLSearchParams } {
   const raw = window.location.hash.replace(/^#\/?/, '');

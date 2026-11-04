@@ -9,7 +9,7 @@ const NAV: { route?: Route; label: string; group: string }[] = [
   { route: 'mccabe-thiele', label: 'McCabe–Thiele', group: 'Distillation' },
   { route: 'batch', label: 'Batch distillation', group: 'Distillation' },
   { route: 'distillation-lines', label: 'Distillation lines', group: 'Distillation' },
-  { label: 'Extraction', group: 'Extraction' },
+  { route: 'extraction', label: 'Extraction', group: 'Extraction' },
   { label: 'Absorption', group: 'Absorption' },
   { label: 'Crystallization', group: 'Crystallization' },
 ];

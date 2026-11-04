@@ -20,7 +20,7 @@ npm run dev       # dev server with hot reload → http://localhost:5173
 | Command | What it does |
 |---|---|
 | `npm run dev` | Development server with hot reload |
-| `npm test` | Unit + integration tests (vitest, 109 tests) |
+| `npm test` | Unit + integration tests (vitest, 133 tests) |
 | `npm run typecheck` | Strict TypeScript check |
 | `npm run build` | Type-check + production bundle in `dist/` |
 | `npm run preview` | Serve the production build → http://localhost:4173 |
@@ -60,8 +60,9 @@ The header switches between modules (hash routes, so links work on static hostin
 | `#/mccabe-thiele` | McCabe–Thiele design workbench |
 | `#/batch` | Batch distillation workbench |
 | `#/distillation-lines` | Ternary distillation lines, border lines and product regions |
+| `#/extraction?tool=cross\|counter\|hn` | Cross-current, counter-current and Hunter–Nash extraction |
 
-Planned: extraction, absorption, crystallization.
+Planned: reactive extraction, absorption, crystallization.
 
 ### McCabe–Thiele workbench (`engine/mtDesign.ts`)
 
@@ -110,6 +111,29 @@ point a stage):
   on the D–F line, chosen so that D and B share a distillation line; stage count
   and D/F are reported. *Snap D onto the line* iterates to a consistent split.
 - Pressure slider moves the azeotropes (ternary saddle 51.5 °C at ≈ 0.81 bar).
+
+### Extraction (`engine/extraction/`)
+
+Three tools on one shared specification (X₀, Y₀, X_N, Ġ/L̇ per system), so they
+compare number for number:
+
+- **Cross-current** (loading diagram): one operating line per stage from the
+  solvent line, whole stages, extraction factor per stage, pooled extract,
+  X*(Y₀) limit; targets: stages, raffinate for given N, solvent ratio for given N.
+- **Counter-current:** one operating line stepped off from the feed end,
+  fractional stages, minimum solvent ratio (tangent pinch) and the one-stage
+  ratio; same three targets; side-by-side solvent comparison with cross-current.
+- **Hunter–Nash** (ternary, partly miscible): mixing point, E₁ by the lever
+  rule, pole Δ = F − E₁ = R_N − S, stages from the feed end, S/F_min (tie-line
+  pinch) and S/F_max (M reaches the binodal).
+
+LLE systems (`lle.ts`): Water / Acetic acid / Isopropyl ether and Water /
+Nicotine / Kerosene from Treybal's tables; Water with acetone or ethanol and
+toluene, benzene or MIBK predicted with UNIFAC (`unifac.ts`, Hansen et al. 1991)
+and an LLE flash continued to the plait point. The UNIFAC implementation is
+checked against literature γ∞ (benzene and toluene in water, water in the
+aromatics) and mutual solubilities; tie lines are verified isoactive. UNIFAC
+systems are labelled as predictions in the UI.
 
 ## Data contract
 

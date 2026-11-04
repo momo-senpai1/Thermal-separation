@@ -10,6 +10,7 @@ import { useRoute } from '@/lib/route';
 const McCabeThielePage = lazy(() => import('@/pages/McCabeThielePage'));
 const BatchPage = lazy(() => import('@/pages/BatchPage'));
 const DistillationLinesPage = lazy(() => import('@/pages/DistillationLinesPage'));
+const ExtractionPage = lazy(() => import('@/pages/ExtractionPage'));
 
 export default function App() {
   const { route, params } = useRoute();
@@ -32,6 +33,8 @@ export default function App() {
                 <McCabeThielePage params={params} />
               ) : route === 'batch' ? (
                 <BatchPage params={params} />
+              ) : route === 'extraction' ? (
+                <ExtractionPage params={params} />
               ) : (
                 <DistillationLinesPage />
               )}
