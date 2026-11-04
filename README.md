@@ -6,12 +6,40 @@ processes (distillation, extraction/absorption, crystallisation, chromatography)
 **Stack:** React 18 · TypeScript · Vite · Tailwind CSS · shadcn/ui · `@xyflow/react` · Zustand
 · Tremor + Recharts (analysis panel).
 
+## Run locally
+
+Requires **Node.js 20.19+ or 22+** (`node -v`).
+
 ```bash
-npm install
-npm run dev        # http://localhost:5173
-npm run build      # type-check + production bundle
-npm test           # engine unit tests (vitest)
+git clone https://github.com/momo-senpai1/Thermal-separation.git
+cd Thermal-separation
+npm ci            # install exact locked dependencies
+npm run dev       # dev server with hot reload → http://localhost:5173
 ```
+
+| Command | What it does |
+|---|---|
+| `npm run dev` | Development server with hot reload |
+| `npm test` | Unit + integration tests (vitest, 44 tests) |
+| `npm run typecheck` | Strict TypeScript check |
+| `npm run build` | Type-check + production bundle in `dist/` |
+| `npm run preview` | Serve the production build → http://localhost:4173 |
+
+## Deploy on GitHub Pages
+
+`.github/workflows/deploy-pages.yml` builds, tests and publishes on every push to
+`main` (or manually from the Actions tab). One-time setup:
+
+1. **Settings → Pages → Build and deployment → Source: GitHub Actions.**
+2. Merge to `main` (or run the workflow manually: **Actions → Deploy to GitHub Pages → Run workflow**).
+3. The site appears at `https://momo-senpai1.github.io/Thermal-separation/`.
+
+GitHub Pages on a **private** repository needs a paid plan (Pro/Team/Enterprise);
+otherwise make the repository public, or deploy `dist/` to any static host
+(Vercel, Netlify, Cloudflare Pages: build command `npm run build`, output `dist`).
+The base path comes from `VITE_BASE` (set automatically by the workflow).
+
+`.github/workflows/ci.yml` runs type-check, tests and build on every push and PR.
 
 ## Roadmap
 
