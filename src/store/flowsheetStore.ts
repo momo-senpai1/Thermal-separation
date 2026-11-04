@@ -10,8 +10,8 @@ import {
   type XYPosition,
 } from '@xyflow/react';
 import { create } from 'zustand';
+import { solveFlowsheet } from '@/engine/flowsheet';
 import {
-  outletSlot,
   type StreamConditions,
   type StreamEdgeData,
   type StreamPayload,
@@ -36,10 +36,16 @@ const TAG_SERIES: Record<UnitType, { prefix: string; base: number; label: string
 };
 
 const DEFAULT_PARAMS: Record<UnitType, UnitParams> = {
-  feed: { theoreticalStages: 0, refluxRatio: 0, heatDuty: 0 },
+  feed: { theoreticalStages: 0, refluxRatio: 0, heatDuty: 0, feedSpec: 'T' },
   mixer: { theoreticalStages: 0, refluxRatio: 0, heatDuty: 0 },
   heater: { theoreticalStages: 0, refluxRatio: 0, heatDuty: 250 },
-  distillation: { theoreticalStages: 12, refluxRatio: 2.5, heatDuty: 0, condenserType: 'total' },
+  distillation: {
+    theoreticalStages: 12,
+    refluxRatio: 2.5,
+    heatDuty: 0,
+    condenserType: 'total',
+    distillateToFeed: 0.42,
+  },
 };
 
 /** Equimolar saturated-liquid feed at 1 atm (≈ benzene/toluene bubble point). */
@@ -95,23 +101,28 @@ function makeUnit(type: UnitType, position: XYPosition, nodes: UnitNode[]): Unit
 }
 
 // ---------------------------------------------------------------------------
-// Propagation — maps every unit's outlet state onto its outgoing streams.
-// Phase 3 replaces the identity mapping on non-feed units with the
-// thermodynamics engine (unit.solve(inlets) → state), evaluated in
-// topological order so downstream nodes react to upstream changes.
+// Solve — runs the sequential-modular engine over the whole graph and writes
+// unit states, diagnostics and stream conditions back in one atomic update.
 // ---------------------------------------------------------------------------
 
-function propagate(nodes: UnitNode[], edges: StreamEdge[]): StreamEdge[] {
-  const byId = new Map(nodes.map((n) => [n.id, n]));
-  return edges.map((e) => {
-    const src = byId.get(e.source);
-    const cond = src?.data.state[outletSlot(e.sourceHandle)] ?? null;
+function solve(nodes: UnitNode[], edges: StreamEdge[]) {
+  const sol = solveFlowsheet(nodes, edges);
+  const solvedNodes = nodes.map((n) => {
+    const u = sol.units.get(n.id);
+    if (!u) return n;
+    // a feed keeps its user specification even if evaluation failed
+    const state = n.type === 'feed' && !u.state.topProduct ? n.data.state : u.state;
+    return { ...n, data: { ...n.data, state, diag: u.diag, column: u.column } };
+  });
+  const solvedEdges = edges.map((e) => {
+    const cond = sol.streams.get(e.id) ?? null;
     const tag = e.data?.tag ?? 'S-??';
     const data: StreamEdgeData = cond
       ? { ...structuredClone(cond), tag, resolved: true }
       : { ...EMPTY_STREAM, tag, resolved: false };
     return { ...e, data };
   });
+  return { nodes: solvedNodes, edges: solvedEdges, lastSolveMs: sol.elapsedMs };
 }
 
 // ---------------------------------------------------------------------------
@@ -121,6 +132,8 @@ function propagate(nodes: UnitNode[], edges: StreamEdge[]): StreamEdge[] {
 export interface FlowsheetState {
   nodes: UnitNode[];
   edges: StreamEdge[];
+  /** wall-clock time of the last engine pass, ms */
+  lastSolveMs: number;
 
   onNodesChange: (changes: NodeChange<UnitNode>[]) => void;
   onEdgesChange: (changes: EdgeChange<StreamEdge>[]) => void;
@@ -137,7 +150,7 @@ export interface FlowsheetState {
   getStreamPayloads: () => StreamPayload[];
 }
 
-function demoFlowsheet(): { nodes: UnitNode[]; edges: StreamEdge[] } {
+function demoFlowsheet() {
   const nodes: UnitNode[] = [];
   const add = (type: UnitType, x: number, y: number) => {
     const n = makeUnit(type, { x, y }, nodes);
@@ -175,13 +188,15 @@ function demoFlowsheet(): { nodes: UnitNode[]; edges: StreamEdge[] } {
   link(m, 'out', h, 'in');
   link(h, 'out', t, 'feed');
 
-  return { nodes, edges: propagate(nodes, edges) };
+  return solve(nodes, edges);
 }
 
 export const useFlowsheet = create<FlowsheetState>()((set, get) => {
-  /** Apply a node mutation and re-propagate streams in one atomic update. */
-  const commit = (nodes: UnitNode[], edges = get().edges) =>
-    set({ nodes, edges: propagate(nodes, edges) });
+  /** Apply a mutation and re-solve the flowsheet in one atomic update. */
+  const commit = (nodes: UnitNode[], edges = get().edges) => set(solve(nodes, edges));
+
+  /** change kinds that alter topology or data (not mere drag / select / measure) */
+  const isStructural = (c: { type: string }) => c.type === 'add' || c.type === 'remove' || c.type === 'replace';
 
   const patchNode = (id: string, fn: (d: UnitNodeData) => UnitNodeData) =>
     commit(get().nodes.map((n) => (n.id === id ? { ...n, data: fn(n.data) } : n)));
@@ -194,10 +209,15 @@ export const useFlowsheet = create<FlowsheetState>()((set, get) => {
       // removing a node orphans its streams — drop them
       const alive = new Set(nodes.map((n) => n.id));
       const edges = get().edges.filter((e) => alive.has(e.source) && alive.has(e.target));
-      commit(nodes, edges);
+      if (changes.some(isStructural)) commit(nodes, edges);
+      else set({ nodes, edges });
     },
 
-    onEdgesChange: (changes) => set({ edges: applyEdgeChanges(changes, get().edges) }),
+    onEdgesChange: (changes) => {
+      const edges = applyEdgeChanges(changes, get().edges);
+      if (changes.some(isStructural)) commit(get().nodes, edges);
+      else set({ edges });
+    },
 
     onConnect: (connection) => {
       if (!get().isValidConnection(connection)) return;

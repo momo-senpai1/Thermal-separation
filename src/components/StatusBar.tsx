@@ -6,6 +6,9 @@ export function StatusBar() {
   const streams = useFlowsheet((s) => s.edges.length);
   const resolved = useFlowsheet((s) => s.edges.filter((e) => e.data?.resolved).length);
   const resetDemo = useFlowsheet((s) => s.resetDemo);
+  const ms = useFlowsheet((s) => s.lastSolveMs);
+  const errors = useFlowsheet((s) => s.nodes.filter((n) => n.data.diag?.status === 'error').length);
+  const warnings = useFlowsheet((s) => s.nodes.filter((n) => n.data.diag?.status === 'warning').length);
 
   return (
     <header className="glass flex h-11 shrink-0 items-center gap-6 px-4">
@@ -21,13 +24,21 @@ export function StatusBar() {
       <div className="flex items-center gap-5 font-mono text-[10px] text-plant-400">
         <Stat label="UNITS" value={nodes} />
         <Stat label="STREAMS" value={`${resolved}/${streams}`} />
-        <Stat label="SYSTEM" value="A/B ideal binary" />
+        <Stat label="SYSTEM" value="Benzene / Toluene" />
+        <Stat label="MODEL" value="Raoult · CMO" />
       </div>
 
       <div className="ml-auto flex items-center gap-4">
-        <span className="flex items-center gap-1.5 font-mono text-[10px] text-signal-vapor">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-signal-vapor" />
-          ENGINE STANDBY
+        {(errors > 0 || warnings > 0) && (
+          <span className="font-mono text-[10px]">
+            {errors > 0 && <span className="text-signal-alarm">{errors} ERR </span>}
+            {warnings > 0 && <span className="text-signal-vapor">{warnings} WARN</span>}
+          </span>
+        )}
+        <span className="flex items-center gap-1.5 font-mono text-[10px] text-signal-ok">
+          <span className="h-1.5 w-1.5 rounded-full bg-signal-ok shadow-[0_0_6px] shadow-signal-ok" />
+          ENGINE ONLINE
+          <span className="text-plant-500">· {ms.toFixed(1)} ms</span>
         </span>
         <button
           type="button"

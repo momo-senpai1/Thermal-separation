@@ -7,7 +7,7 @@ export function HeaterNode({ data, selected }: NodeProps<UnitNode>) {
   const s = data.state.topProduct;
   const q = data.params.heatDuty;
   return (
-    <NodeShell tag={data.tag} label="Heater" selected={selected} status={s ? 'live' : 'idle'} accent="heat">
+    <NodeShell tag={data.tag} label="Heater" selected={selected} diag={data.diag} accent="heat">
       <div className="flex items-center gap-3">
         {/* ISA heat-exchanger symbol: circle with process coil */}
         <svg viewBox="0 0 48 48" className="h-12 w-12 shrink-0" aria-hidden>
@@ -17,6 +17,7 @@ export function HeaterNode({ data, selected }: NodeProps<UnitNode>) {
         <div className="min-w-[96px] flex-1">
           <Readout label="Q" value={fmt(q, 0)} unit="kW" tone="heat" />
           <Readout label="T out" value={fmt(s ? kToC(s.temperature) : null)} unit="°C" tone={s ? 'default' : 'muted'} />
+          <Readout label="q out" value={fmt(s?.vaporFraction, 3)} tone={!s ? 'muted' : s.vaporFraction < 1 ? 'vapor' : 'liquid'} />
         </div>
       </div>
       <Handle type="target" position={Position.Left} id="in" />

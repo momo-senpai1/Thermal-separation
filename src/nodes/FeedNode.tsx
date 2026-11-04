@@ -5,8 +5,9 @@ import { NodeShell, Readout } from './NodeShell';
 
 export function FeedNode({ data, selected }: NodeProps<UnitNode>) {
   const s = data.state.topProduct;
+  const qSpec = data.params.feedSpec === 'q';
   return (
-    <NodeShell tag={data.tag} label="Feed" selected={selected} status={s ? 'live' : 'idle'}>
+    <NodeShell tag={data.tag} label="Feed" selected={selected} diag={data.diag}>
       <div className="flex gap-3">
         {/* off-page connector / source symbol */}
         <svg viewBox="0 0 40 56" className="h-14 w-10 shrink-0" aria-hidden>
@@ -15,9 +16,9 @@ export function FeedNode({ data, selected }: NodeProps<UnitNode>) {
         </svg>
         <div className="min-w-[104px] flex-1">
           <Readout label="F" value={fmt(s?.flowRate)} unit="kmol/h" />
-          <Readout label="T" value={fmt(s ? kToC(s.temperature) : null)} unit="°C" tone="heat" />
+          <Readout label="T" value={fmt(s ? kToC(s.temperature) : null)} unit="°C" tone="heat" computed={qSpec} />
           <Readout label="P" value={fmt(s?.pressure)} unit="kPa" />
-          <Readout label="q" value={fmt(s?.vaporFraction, 2)} tone={s && s.vaporFraction < 1 ? 'vapor' : 'liquid'} />
+          <Readout label="q" value={fmt(s?.vaporFraction, 2)} tone={s && s.vaporFraction < 1 ? 'vapor' : 'liquid'} computed={!qSpec} />
           <Readout label="xA" value={fmt(s?.molarFractions.compA, 3)} tone="liquid" />
         </div>
       </div>

@@ -329,13 +329,21 @@ export function heatStream(
 // Validity diagnostics
 // ---------------------------------------------------------------------------
 
-/** Advisory warnings when T leaves the Antoine fit range or exceeds Tc. */
+/**
+ * Tolerance for Antoine extrapolation before warning. Antoine fits of this kind
+ * typically stay within ~1 % of measured P° for ~10 K beyond the fitted range
+ * (e.g. benzene in toluene-column bottoms at ≈ 107–110 °C).
+ */
+export const ANTOINE_EXTRAPOLATION_MARGIN = 10;
+
+/** Advisory warnings when T leaves the Antoine fit range (beyond the margin) or exceeds Tc. */
 export function validityWarnings(comps: readonly PureComponent[], T: number): string[] {
   const tc = T - 273.15;
+  const m = ANTOINE_EXTRAPOLATION_MARGIN;
   const out: string[] = [];
   for (const c of comps) {
     if (T >= c.Tc) out.push(`${c.name}: T = ${T.toFixed(1)} K is above Tc (${c.Tc} K)`);
-    else if (tc < c.antoine.Tmin || tc > c.antoine.Tmax)
+    else if (tc < c.antoine.Tmin - m || tc > c.antoine.Tmax + m)
       out.push(`${c.name}: Antoine extrapolated (${c.antoine.Tmin}–${c.antoine.Tmax} °C)`);
   }
   return out;

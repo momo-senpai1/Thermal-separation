@@ -1,12 +1,13 @@
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
+import type { Diagnostics, SolveStatus } from '@/types/process';
 
 interface NodeShellProps {
   tag: string;
   label: string;
   selected?: boolean;
-  /** live = unit has a solved state; idle = awaiting inputs/engine */
-  status: 'live' | 'idle';
+  /** solver diagnostics; undefined before the first solve */
+  diag?: Diagnostics;
   accent?: 'liquid' | 'vapor' | 'heat';
   className?: string;
   children: ReactNode;
@@ -19,12 +20,22 @@ const ACCENT = {
 } as const;
 
 /** Glass instrument card shared by every unit operation. */
-export function NodeShell({ tag, label, selected, status, accent = 'liquid', className, children }: NodeShellProps) {
+const LED: Record<SolveStatus, string> = {
+  ok: 'bg-signal-ok shadow-[0_0_6px] shadow-signal-ok',
+  warning: 'bg-signal-vapor shadow-[0_0_6px] shadow-signal-vapor',
+  error: 'bg-signal-alarm shadow-[0_0_6px] shadow-signal-alarm animate-pulse',
+  idle: 'bg-plant-500',
+};
+
+export function NodeShell({ tag, label, selected, diag, accent = 'liquid', className, children }: NodeShellProps) {
+  const status = diag?.status ?? 'idle';
+  const message = status === 'ok' ? null : diag?.messages[0];
   return (
     <div
       className={cn(
         'glass relative min-w-[168px] transition-shadow duration-150',
         selected && 'shadow-glow',
+        status === 'error' && 'border-signal-alarm/40',
         className,
       )}
     >
@@ -34,16 +45,23 @@ export function NodeShell({ tag, label, selected, status, accent = 'liquid', cla
         <span className="tag text-plant-200">{tag}</span>
         <span className="flex items-center gap-1.5">
           <span className="truncate text-[10px] text-plant-400">{label}</span>
-          <span
-            title={status === 'live' ? 'State resolved' : 'Awaiting engine / inputs'}
-            className={cn(
-              'h-1.5 w-1.5 rounded-full',
-              status === 'live' ? 'bg-signal-ok shadow-[0_0_6px] shadow-signal-ok' : 'bg-plant-500',
-            )}
-          />
+          <span title={diag?.messages.join('\n') || 'Solved'} className={cn('h-1.5 w-1.5 rounded-full', LED[status])} />
         </span>
       </header>
       <div className="px-3 py-2">{children}</div>
+      {message && (
+        <footer
+          title={diag?.messages.join('\n')}
+          className={cn(
+            'max-w-[230px] truncate border-t border-white/[0.05] px-3 py-1 font-mono text-[9px]',
+            status === 'error' && 'text-signal-alarm',
+            status === 'warning' && 'text-signal-vapor/80',
+            status === 'idle' && 'text-plant-500',
+          )}
+        >
+          {message}
+        </footer>
+      )}
     </div>
   );
 }
@@ -53,15 +71,21 @@ export function Readout({
   value,
   unit,
   tone = 'default',
+  computed = false,
 }: {
   label: string;
   value: string;
   unit?: string;
   tone?: 'default' | 'liquid' | 'vapor' | 'heat' | 'muted';
+  /** marks a value computed by the engine (vs. specified by the user) */
+  computed?: boolean;
 }) {
   return (
     <div className="flex items-baseline justify-between gap-3 text-[11px] leading-5">
-      <span className="font-mono text-plant-400">{label}</span>
+      <span className="font-mono text-plant-400">
+        {label}
+        {computed && <span className="ml-1 align-super text-[7px] text-plant-500">calc</span>}
+      </span>
       <span
         className={cn(
           'readout',

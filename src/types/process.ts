@@ -50,7 +50,16 @@ export interface UnitParams {
    * partial condenser contributes 1. Only meaningful for 'distillation'.
    */
   condenserType?: CondenserType;
+  /** Extension (distillation): distillate-to-feed ratio D/F — closes the rating problem. */
+  distillateToFeed?: number;
+  /**
+   * Extension (feed): which thermal variable is specified. 'T' → q is computed;
+   * 'q' → T is computed. At fixed P and z the two are not independent.
+   */
+  feedSpec?: FeedSpec;
 }
+
+export type FeedSpec = 'T' | 'q';
 
 export interface UnitState {
   /** feed/mixer/heater: the outlet stream · distillation: distillate (D) */
@@ -71,12 +80,46 @@ export interface UnitOperationPayload {
 // React Flow data carriers (payload + presentation-only fields)
 // ---------------------------------------------------------------------------
 
+export type SolveStatus = 'idle' | 'ok' | 'warning' | 'error';
+
+export interface Diagnostics {
+  status: SolveStatus;
+  messages: string[];
+}
+
+/** Column results beyond the strict payload (flows, duties, stage profile). */
+export interface ColumnResults {
+  alpha: number;
+  D: number;
+  B: number;
+  xD: number;
+  xB: number;
+  feedStage: number;
+  Rmin: number;
+  Nmin: number;
+  /** condenser duty, kW (negative = heat removed) */
+  Qc: number;
+  /** reboiler duty, kW */
+  Qr: number;
+  /** column feed as seen by the solver (for McCabe–Thiele plotting) */
+  zF: number;
+  q: number;
+  steps: { stage: number; x: number; y: number; section: 'condenser' | 'rectifying' | 'stripping' }[];
+  rectifying: { slope: number; intercept: number };
+  stripping: { slope: number; intercept: number };
+  intersection: { x: number; y: number };
+  pinch: { x: number; y: number };
+}
+
 export type UnitNodeData = {
   /** ISA-style equipment tag, e.g. "T-401" */
   tag: string;
   label: string;
   params: UnitParams;
   state: UnitState;
+  /** solver output — presentation only, not part of the payload */
+  diag?: Diagnostics;
+  column?: ColumnResults | null;
 };
 
 export type StreamEdgeData = StreamConditions & {

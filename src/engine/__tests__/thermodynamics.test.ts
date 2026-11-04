@@ -197,6 +197,7 @@ describe('unit balances', () => {
 describe('validity warnings', () => {
   it('flags Antoine extrapolation and supercritical temperatures', () => {
     expect(validityWarnings(BT, 360)).toEqual([]);
+    expect(validityWarnings(BT, 383)).toEqual([]); // benzene 6.85 K past its fit — within margin
     expect(validityWarnings(BT, 390).some((w) => w.includes('Benzene'))).toBe(true);
     expect(validityWarnings(BT, 600).some((w) => w.includes('above Tc'))).toBe(true);
   });

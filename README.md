@@ -19,7 +19,7 @@ npm test           # engine unit tests (vitest)
 |---|---|---|
 | 1 | React Flow canvas, custom P&ID nodes (Feed, Mixer, Heater, Column), Zustand store | ✅ |
 | 2 | `thermodynamics.ts` — Raoult/Dalton VLE, Antoine, enthalpy balances | ✅ |
-| 3 | Engine ↔ UI: unit solve in topological order, live stream propagation | ⏳ |
+| 3 | Engine ↔ UI: unit solve in topological order, live stream propagation | ✅ |
 | 4 | McCabe–Thiele side panel (Tremor/Recharts) on column selection | ⏳ |
 
 ## Data contract
@@ -33,12 +33,14 @@ Defined in `src/types/process.ts`. Internal units: kmol/h, **K**, kPa, kW
 
 // Unit operation (node)
 { id, type: 'feed' | 'mixer' | 'heater' | 'distillation',
-  params: { theoreticalStages, refluxRatio, heatDuty, condenserType? },
+  params: { theoreticalStages, refluxRatio, heatDuty, condenserType?, distillateToFeed?, feedSpec? },
   state:  { topProduct, bottomProduct } }
 ```
 
-Extensions to the original contract: `type: 'feed'` (boundary streams) and the
-optional `params.condenserType` (`total` = 0 equilibrium stages, `partial` = 1).
+Extensions to the original contract: `type: 'feed'` (boundary streams), and the
+optional params `condenserType` (`total` = 0 equilibrium stages, `partial` = +1),
+`distillateToFeed` (D/F — closes the column rating problem) and `feedSpec`
+(`'T'` → q computed, `'q'` → T computed; at fixed P and z they are not independent).
 `useFlowsheet.getState().getUnitPayloads()` / `getStreamPayloads()` serialise the
 canvas to exactly this schema.
 
@@ -63,6 +65,17 @@ Core functions take composition vectors (multicomponent-ready for MESH);
 `binaryComponents`, `toVector`, `toBinary` adapt to the `{ compA, compB }` schema.
 Components: benzene, toluene, n-hexane, n-heptane (default system benzene/toluene).
 Polar/associating mixtures are excluded — Raoult's law does not apply to them.
+
+### Flowsheet solver (`engine/flowsheet.ts`)
+
+Sequential-modular: units are solved in topological order on every parameter
+change, so downstream nodes update in the same render. Feed → (T or q) spec;
+mixer → adiabatic mass/enthalpy balance + PH flash; heater → H_out = H_in + 3600·Q/F
++ PH flash; column → McCabe–Thiele rating (`engine/mccabeThiele.ts`: CMO,
+column-average α, optimal feed stage, x_D solved by Brent so the reboiler liquid
+equals x_B), products at bubble/dew point, condenser/reboiler duties from
+rigorous enthalpies. Recycle loops are detected and flagged (not yet solved).
+Each unit reports `ok / warning / error / idle` diagnostics (status LED on the node).
 
 Validation (benzene/toluene, 1 atm, z = 0.5): bubble 92.1 °C, y = 0.714,
 dew 98.8 °C, α̅ = 2.47 — matching textbook values.

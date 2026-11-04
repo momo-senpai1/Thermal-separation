@@ -66,10 +66,10 @@ export function DistillationNode({ data, selected }: NodeProps<UnitNode>) {
   const { theoreticalStages, refluxRatio, condenserType = 'total' } = data.params;
   const { topProduct: D, bottomProduct: B } = data.state;
   const partial = condenserType === 'partial';
-  const live = !!(D && B);
+  const col = data.column;
 
   return (
-    <NodeShell tag={data.tag} label="Rectification" selected={selected} status={live ? 'live' : 'idle'} className="w-[236px]">
+    <NodeShell tag={data.tag} label="Rectification" selected={selected} diag={data.diag} className="w-[236px]">
       <div className="flex gap-2">
         <ColumnSymbol stages={theoreticalStages} partial={partial} />
         <div className="flex flex-1 flex-col justify-between py-1">
@@ -77,6 +77,7 @@ export function DistillationNode({ data, selected }: NodeProps<UnitNode>) {
             <p className="tag mb-1 text-plant-500">Design</p>
             <Readout label="N" value={String(theoreticalStages)} unit="stg" />
             <Readout label="R" value={fmt(refluxRatio, 2)} tone="liquid" />
+            <Readout label="D/F" value={fmt(data.params.distillateToFeed ?? 0.5, 2)} />
             <Readout label="Cond" value={partial ? 'PART' : 'TOTAL'} tone={partial ? 'vapor' : 'liquid'} />
             <p className="mt-1 font-mono text-[9px] leading-tight text-plant-500">
               {partial ? '+1 eq. stage' : '0 eq. stages'}
@@ -84,8 +85,10 @@ export function DistillationNode({ data, selected }: NodeProps<UnitNode>) {
           </div>
           <div>
             <p className="tag mb-1 text-plant-500">Products</p>
-            <Readout label="xD" value={fmt(D?.molarFractions.compA, 3)} tone={D ? 'liquid' : 'muted'} />
-            <Readout label="xB" value={fmt(B?.molarFractions.compA, 3)} tone={B ? 'liquid' : 'muted'} />
+            <Readout label="xD" value={fmt(D?.molarFractions.compA, 4)} tone={D ? 'liquid' : 'muted'} />
+            <Readout label="xB" value={fmt(B?.molarFractions.compA, 4)} tone={B ? 'liquid' : 'muted'} />
+            <Readout label="NF" value={col ? String(col.feedStage) : '—'} tone={col ? 'default' : 'muted'} />
+            <Readout label="QR" value={fmt(col?.Qr, 0)} unit="kW" tone={col ? 'heat' : 'muted'} />
           </div>
         </div>
       </div>
