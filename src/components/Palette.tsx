@@ -42,6 +42,18 @@ const ITEMS: { type: UnitType; tag: string; name: string; desc: string; icon: JS
       </>
     ),
   },
+  {
+    type: 'batch',
+    tag: 'B',
+    name: 'Batch still',
+    desc: 'Charge → distillate + residue',
+    icon: (
+      <>
+        <path d="M4 13h12v4a6 5 0 0 1-12 0z" />
+        <path d="M10 13V4h8v4M18 11v3" />
+      </>
+    ),
+  },
 ];
 
 export function Palette() {

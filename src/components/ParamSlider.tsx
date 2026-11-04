@@ -12,6 +12,8 @@ interface ParamSliderProps {
   digits?: number;
   /** value is computed by the engine — shown read-only */
   computed?: boolean;
+  /** not applicable in the current configuration */
+  disabled?: boolean;
   onChange: (v: number) => void;
 }
 
@@ -26,10 +28,12 @@ export function ParamSlider({
   step,
   digits = 1,
   computed = false,
+  disabled = false,
   onChange,
 }: ParamSliderProps) {
+  const locked = computed || disabled;
   return (
-    <div className={cn('space-y-1', computed && 'opacity-60')}>
+    <div className={cn('space-y-1', computed && 'opacity-60', disabled && 'opacity-35')} aria-disabled={disabled || undefined}>
       <div className="flex items-baseline justify-between">
         <label className="text-[11px] text-plant-300">
           <span className="mr-1.5 font-mono text-plant-500">{symbol}</span>
@@ -47,7 +51,7 @@ export function ParamSlider({
             min={min}
             max={max}
             step={step}
-            disabled={computed}
+            disabled={locked}
             onChange={(e) => {
               const v = Number(e.target.value);
               if (Number.isFinite(v)) onChange(Math.min(max, Math.max(min, v)));
@@ -62,7 +66,7 @@ export function ParamSlider({
         min={min}
         max={max}
         step={step}
-        disabled={computed}
+        disabled={locked}
         onValueChange={([v]) => v !== undefined && onChange(v)}
       />
     </div>

@@ -37,7 +37,7 @@ export type StreamPayload = StreamConditions & {
  * `feed` extends the original contract ('distillation' | 'mixer' | 'heater')
  * so that boundary streams can be specified on the canvas.
  */
-export type UnitType = 'feed' | 'mixer' | 'heater' | 'distillation';
+export type UnitType = 'feed' | 'mixer' | 'heater' | 'distillation' | 'batch';
 
 export type CondenserType = 'total' | 'partial';
 
@@ -57,6 +57,10 @@ export interface UnitParams {
    * 'q' → T is computed. At fixed P and z the two are not independent.
    */
   feedSpec?: FeedSpec;
+  /** Extension (batch still): operating mode */
+  batchMode?: 'rayleigh' | 'constant-reflux';
+  /** Extension (batch still): distilled fraction D/L₀ at which the cut is taken */
+  distilledFraction?: number;
 }
 
 export type FeedSpec = 'T' | 'q';
@@ -120,7 +124,19 @@ export type UnitNodeData = {
   /** solver output — presentation only, not part of the payload */
   diag?: Diagnostics;
   column?: ColumnResults | null;
+  batch?: BatchResults | null;
 };
+
+/** Batch-still results (per batch, at the chosen cut). */
+export interface BatchResults {
+  alpha: number;
+  xW: number;
+  xDavg: number;
+  recovery: number;
+  boilup: number;
+  /** last reachable cut D/L₀ */
+  dEnd: number;
+}
 
 export type StreamEdgeData = StreamConditions & {
   /** Stream tag, e.g. "S-03" */
@@ -135,8 +151,9 @@ export const PORTS = {
   mixer: { inlets: ['in-1', 'in-2'] as const, outlets: ['out'] as const },
   heater: { inlets: ['in'] as const, outlets: ['out'] as const },
   distillation: { inlets: ['feed'] as const, outlets: ['distillate', 'bottoms'] as const },
+  batch: { inlets: ['charge'] as const, outlets: ['distillate', 'residue'] as const },
 } satisfies Record<UnitType, { inlets: readonly string[]; outlets: readonly string[] }>;
 
 /** Which unit-state slot an outlet port reads from. */
 export const outletSlot = (handle: string | null | undefined): keyof UnitState =>
-  handle === 'bottoms' ? 'bottomProduct' : 'topProduct';
+  handle === 'bottoms' || handle === 'residue' ? 'bottomProduct' : 'topProduct';

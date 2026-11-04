@@ -6,12 +6,40 @@ processes (distillation, extraction/absorption, crystallisation, chromatography)
 **Stack:** React 18 · TypeScript · Vite · Tailwind CSS · shadcn/ui · `@xyflow/react` · Zustand
 · Tremor + Recharts (analysis panel).
 
+## Run locally
+
+Requires **Node.js 20.19+ or 22+** (`node -v`).
+
 ```bash
-npm install
-npm run dev        # http://localhost:5173
-npm run build      # type-check + production bundle
-npm test           # engine unit tests (vitest)
+git clone https://github.com/momo-senpai1/Thermal-separation.git
+cd Thermal-separation
+npm ci            # install exact locked dependencies
+npm run dev       # dev server with hot reload → http://localhost:5173
 ```
+
+| Command | What it does |
+|---|---|
+| `npm run dev` | Development server with hot reload |
+| `npm test` | Unit + integration tests (vitest, 109 tests) |
+| `npm run typecheck` | Strict TypeScript check |
+| `npm run build` | Type-check + production bundle in `dist/` |
+| `npm run preview` | Serve the production build → http://localhost:4173 |
+
+## Deploy on GitHub Pages
+
+`.github/workflows/deploy-pages.yml` builds, tests and publishes on every push to
+`main` (or manually from the Actions tab). One-time setup:
+
+1. **Settings → Pages → Build and deployment → Source: GitHub Actions.**
+2. Merge to `main` (or run the workflow manually: **Actions → Deploy to GitHub Pages → Run workflow**).
+3. The site appears at `https://momo-senpai1.github.io/Thermal-separation/`.
+
+GitHub Pages on a **private** repository needs a paid plan (Pro/Team/Enterprise);
+otherwise make the repository public, or deploy `dist/` to any static host
+(Vercel, Netlify, Cloudflare Pages: build command `npm run build`, output `dist`).
+The base path comes from `VITE_BASE` (set automatically by the workflow).
+
+`.github/workflows/ci.yml` runs type-check, tests and build on every push and PR.
 
 ## Roadmap
 
@@ -21,6 +49,67 @@ npm test           # engine unit tests (vitest)
 | 2 | `thermodynamics.ts` — Raoult/Dalton VLE, Antoine, enthalpy balances | ✅ |
 | 3 | Engine ↔ UI: unit solve in topological order, live stream propagation | ✅ |
 | 4 | McCabe–Thiele side panel (Tremor/Recharts) on column selection | ✅ |
+
+## Modules
+
+The header switches between modules (hash routes, so links work on static hosting):
+
+| Route | Module |
+|---|---|
+| `#/flowsheet` | P&ID flowsheet: feeds, mixer, heater, distillation column, **batch still** |
+| `#/mccabe-thiele` | McCabe–Thiele design workbench |
+| `#/batch` | Batch distillation workbench |
+| `#/distillation-lines` | Ternary distillation lines, border lines and product regions |
+
+Planned: extraction, absorption, crystallization.
+
+### McCabe–Thiele workbench (`engine/mtDesign.ts`)
+
+- **VLE systems** (`engine/vle/systems.ts`): constant α; benzene/toluene and
+  n-hexane/n-heptane (Raoult); methanol/water (Perry's datasheet); ethanol/water
+  and isopropanol/water (Van Laar — azeotropes at x ≈ 0.91 and 0.66, validated
+  against literature).
+- **Calculation targets:** number of stages (fractional last stage), bottoms
+  x_B for a given N, distillate x_D for a given N.
+- **Murphree efficiency** on pseudo-equilibrium curves (kinked at the section switch).
+- **Fixed feed stage** with dashed operating-line extensions; pinch and
+  "feed below the column end" detection.
+- **Azeotropes:** specifications must lie on one side; above the azeotrope the
+  column is solved mirrored (x′ = 1 − x) and drawn under the diagonal.
+- **Shortcuts (constant α):** Fenske N_min, Underwood v_min (binary, exact θ),
+  Gilliland via Liddle's fit (slide misprints corrected) with an N–v chart,
+  asymptotes and the 1.05–1.5·v_min design band.
+- The unit tests reproduce every reference value of the workbench specification
+  (N = 15.01, v_min = 2.123, Gilliland 15.62, the feed-stage table, Murphree cases, …).
+
+### Batch distillation workbench (`engine/batch.ts`)
+
+Open distillation (Rayleigh), batch rectification at constant reflux and at
+constant distillate purity. Play / scrub the batch progress D/L₀; the y–x
+construction, still / instantaneous / collected compositions, reflux, boil-up
+and recovery follow. The flowsheet's **batch still** uses the same engine
+(inlet = charge per cycle, outlets = receiver and residue at the chosen cut) and
+can open the workbench pre-filled.
+
+### Distillation lines (`engine/ternary/`)
+
+Three components on one triangle, at total reflux (x_{n+1} = y*(x_n), every
+point a stage):
+
+- **Systems:** n-hexane / cyclohexane / n-heptane (ideal, zeotropic reference)
+  and acetone / chloroform / methanol (Wilson). Each Wilson binary is fitted to
+  its literature azeotrope at 1 atm; the ternary saddle azeotrope is then a
+  *prediction* — 57.3 °C at (0.355, 0.213, 0.432) vs. ≈ 57.5 °C in the literature.
+- **Singular points** found and classified from the stage map's Jacobian
+  (light node / heavy node / saddle); **border lines** traced from saddle
+  eigen-directions; the field seeded from heavy nodes and saddles, with arrows
+  towards rising temperature.
+- **Product regions** for a feed: between the distillation line through F and
+  the direct / indirect splits, closed along the triangle edges or a border line.
+- **Column at total reflux:** drag F and D; B follows from the material balance
+  on the D–F line, chosen so that D and B share a distillation line; stage count
+  and D/F are reported. *Snap D onto the line* iterates to a consistent split.
+- Pressure slider moves the azeotropes (ternary saddle 51.5 °C at ≈ 0.81 bar).
 
 ## Data contract
 
@@ -32,8 +121,8 @@ Defined in `src/types/process.ts`. Internal units: kmol/h, **K**, kPa, kW
 { id, source, target, flowRate, temperature, pressure, vaporFraction /* q */, molarFractions: { compA, compB } }
 
 // Unit operation (node)
-{ id, type: 'feed' | 'mixer' | 'heater' | 'distillation',
-  params: { theoreticalStages, refluxRatio, heatDuty, condenserType?, distillateToFeed?, feedSpec? },
+{ id, type: 'feed' | 'mixer' | 'heater' | 'distillation' | 'batch',
+  params: { theoreticalStages, refluxRatio, heatDuty, condenserType?, distillateToFeed?, feedSpec?, batchMode?, distilledFraction? },
   state:  { topProduct, bottomProduct } }
 ```
 

@@ -9,6 +9,7 @@
 
 import {
   outletSlot,
+  type BatchResults,
   type ColumnResults,
   type Diagnostics,
   type StreamConditions,
@@ -17,7 +18,9 @@ import {
   type UnitType,
 } from '@/types/process';
 import { DEFAULT_SYSTEM, type BinarySystem } from './components';
+import { batchAt, simulateBatch } from './batch';
 import { rateColumn } from './mccabeThiele';
+import { alphaSystem } from './vle/systems';
 import {
   averageRelativeVolatility,
   binaryComponents,
@@ -55,6 +58,7 @@ export interface UnitSolution {
   state: UnitState;
   diag: Diagnostics;
   column: ColumnResults | null;
+  batch?: BatchResults | null;
 }
 
 export interface FlowsheetSolution {
@@ -214,6 +218,54 @@ function solveColumn(comps: Comps, data: UnitNodeData, feed: StreamConditions): 
   };
 }
 
+/**
+ * Batch still with an optional column on top. The inlet is the charge (its
+ * flow is read as kmol per batch cycle); the outlets are the receiver contents
+ * (distillate) and the pot residue at the chosen cut D/L₀, at their bubble points.
+ */
+function solveBatchStill(comps: Comps, data: UnitNodeData, charge: StreamConditions): UnitSolution {
+  const [light, heavy] = comps as [Comps[number], Comps[number]];
+  const P = charge.pressure;
+  const alpha = averageRelativeVolatility(light, heavy, P);
+  const mode = data.params.batchMode ?? 'constant-reflux';
+  const sim = simulateBatch({
+    y: alphaSystem(alpha).y,
+    x0: charge.molarFractions.compA,
+    mode,
+    N: data.params.theoreticalStages,
+    v: data.params.refluxRatio,
+  });
+  if (!sim.ok) throw new Error(sim.error ?? 'Batch simulation failed');
+  const dEnd = sim.points.at(-1)!.d;
+  const cut = Math.min(data.params.distilledFraction ?? 0.5, dEnd - 1e-6);
+  const p = batchAt(sim.points, cut, mode);
+  const xD = [p.xDavg, 1 - p.xDavg];
+  const xW = [p.xW, 1 - p.xW];
+  const warnings: string[] = [];
+  if ((data.params.distilledFraction ?? 0.5) > dEnd) warnings.push(`Cut limited to D/L₀ = ${dEnd.toFixed(3)}.`);
+  return {
+    state: {
+      topProduct: {
+        flowRate: charge.flowRate * cut,
+        temperature: bubbleTemperature(comps, xD, P).T,
+        pressure: P,
+        vaporFraction: 1,
+        molarFractions: toBinary(xD),
+      },
+      bottomProduct: {
+        flowRate: charge.flowRate * (1 - cut),
+        temperature: bubbleTemperature(comps, xW, P).T,
+        pressure: P,
+        vaporFraction: 1,
+        molarFractions: toBinary(xW),
+      },
+    },
+    diag: withWarnings(warnings),
+    column: null,
+    batch: { alpha, xW: p.xW, xDavg: p.xDavg, recovery: p.recovery, boilup: p.boilup * charge.flowRate, dEnd },
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Driver
 // ---------------------------------------------------------------------------
@@ -273,6 +325,7 @@ export function solveFlowsheet(
         const ins = inlets as StreamConditions[];
         if (type === 'mixer') sol = solveMixer(comps, ins);
         else if (type === 'heater') sol = solveHeater(comps, node.data, ins[0]!);
+        else if (type === 'batch') sol = solveBatchStill(comps, node.data, ins[0]!);
         else sol = solveColumn(comps, node.data, ins[0]!);
       }
     } catch (err) {

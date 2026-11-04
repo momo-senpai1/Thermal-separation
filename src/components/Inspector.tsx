@@ -1,5 +1,6 @@
 import { ParamSlider } from '@/components/ParamSlider';
 import { Segmented } from '@/components/ui/segmented';
+import { navigate } from '@/lib/route';
 import { cn, cToK, fmt, kToC } from '@/lib/utils';
 import { DEFAULT_FEED, useFlowsheet, type StreamEdge, type UnitNode } from '@/store/flowsheetStore';
 import type { CondenserType, Diagnostics, FeedSpec, StreamConditions } from '@/types/process';
@@ -172,6 +173,12 @@ function NodePanel({ node }: { node: UnitNode }) {
             </p>
           </Section>
           {c && (
+            <OpenButton
+              label="Open in McCabe–Thiele workbench"
+              onClick={() => navigate('mccabe-thiele', { alpha: c.alpha.toFixed(3), v: params.refluxRatio, xF: c.zF.toFixed(4), q: c.q.toFixed(3) })}
+            />
+          )}
+          {c && (
             <Section title="Performance">
               <KV
                 rows={[
@@ -193,9 +200,83 @@ function NodePanel({ node }: { node: UnitNode }) {
         </>
       );
     }
+    case 'batch': {
+      const b = node.data.batch;
+      const mode = params.batchMode ?? 'constant-reflux';
+      const charge = useFlowsheet.getState().edges.find((e) => e.target === node.id)?.data;
+      return (
+        <>
+          <Section title="Batch still">
+            <div className="space-y-1.5">
+              <p className="text-[11px] text-plant-300">Operation</p>
+              <Segmented<'rayleigh' | 'constant-reflux'>
+                value={mode}
+                onChange={(v) => updateParams(node.id, { batchMode: v })}
+                options={[
+                  { value: 'rayleigh', label: 'Open', hint: 'Open distillation (Rayleigh) — the pot is the only stage' },
+                  { value: 'constant-reflux', label: 'Column', hint: 'Batch rectification at constant reflux' },
+                ]}
+              />
+            </div>
+            <ParamSlider label="Stages incl. still" symbol="N" unit="stg" min={1} max={30} step={1} digits={0}
+              disabled={mode === 'rayleigh'} value={params.theoreticalStages}
+              onChange={(v) => updateParams(node.id, { theoreticalStages: Math.round(v) })} />
+            <ParamSlider label="Reflux ratio" symbol="v" min={0} max={20} step={0.05} digits={2}
+              disabled={mode === 'rayleigh'} value={params.refluxRatio} onChange={(v) => updateParams(node.id, { refluxRatio: v })} />
+            <ParamSlider label="Cut (distilled fraction)" symbol="D/L₀" min={0.02} max={0.98} step={0.005} digits={3}
+              value={params.distilledFraction ?? 0.5} onChange={(v) => updateParams(node.id, { distilledFraction: v })} />
+            <p className="text-[10px] leading-relaxed text-plant-500">
+              The inlet flow is read as kmol per batch cycle; outlets are the receiver contents and the pot residue at
+              the cut. Constant α of the column-average volatility.
+            </p>
+          </Section>
+          {b && charge?.resolved && (
+            <OpenButton
+              label="Open in Batch workbench"
+              onClick={() =>
+                navigate('batch', {
+                  alpha: b.alpha.toFixed(3),
+                  x0: charge.molarFractions.compA.toFixed(4),
+                  mode,
+                  N: params.theoreticalStages,
+                  v: params.refluxRatio,
+                  d: (params.distilledFraction ?? 0.5).toFixed(3),
+                })
+              }
+            />
+          )}
+          {b && (
+            <Section title="Per batch">
+              <KV
+                rows={[
+                  ['α avg', fmt(b.alpha, 3)],
+                  ['x̄D (receiver)', fmt(b.xDavg, 4)],
+                  ['xW (residue)', fmt(b.xW, 4)],
+                  ['Recovery A', fmt(b.recovery * 100, 1), '%'],
+                  ['Boil-up', fmt(b.boilup, 1), 'kmol'],
+                  ['Max. cut', fmt(b.dEnd, 3), 'D/L₀'],
+                ]}
+              />
+            </Section>
+          )}
+        </>
+      );
+    }
     default:
       return null;
   }
+}
+
+function OpenButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full rounded-md border border-signal-liquid/40 bg-signal-liquid/[0.07] py-1.5 text-[11px] text-signal-liquid transition-colors hover:bg-signal-liquid/15"
+    >
+      {label} →
+    </button>
+  );
 }
 
 function DiagPanel({ diag }: { diag?: Diagnostics }) {

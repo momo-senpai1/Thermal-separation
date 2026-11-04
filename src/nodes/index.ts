@@ -1,4 +1,5 @@
 import type { NodeTypes } from '@xyflow/react';
+import { BatchNode } from './BatchNode';
 import { DistillationNode } from './DistillationNode';
 import { FeedNode } from './FeedNode';
 import { HeaterNode } from './HeaterNode';
@@ -9,4 +10,5 @@ export const nodeTypes = {
   mixer: MixerNode,
   heater: HeaterNode,
   distillation: DistillationNode,
+  batch: BatchNode,
 } satisfies NodeTypes;
