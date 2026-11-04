@@ -20,7 +20,7 @@ npm run dev       # dev server with hot reload → http://localhost:5173
 | Command | What it does |
 |---|---|
 | `npm run dev` | Development server with hot reload |
-| `npm test` | Unit + integration tests (vitest, 95 tests) |
+| `npm test` | Unit + integration tests (vitest, 109 tests) |
 | `npm run typecheck` | Strict TypeScript check |
 | `npm run build` | Type-check + production bundle in `dist/` |
 | `npm run preview` | Serve the production build → http://localhost:4173 |
@@ -59,8 +59,9 @@ The header switches between modules (hash routes, so links work on static hostin
 | `#/flowsheet` | P&ID flowsheet: feeds, mixer, heater, distillation column, **batch still** |
 | `#/mccabe-thiele` | McCabe–Thiele design workbench |
 | `#/batch` | Batch distillation workbench |
+| `#/distillation-lines` | Ternary distillation lines, border lines and product regions |
 
-Planned: distillation lines (ternary), extraction, absorption, crystallization.
+Planned: extraction, absorption, crystallization.
 
 ### McCabe–Thiele workbench (`engine/mtDesign.ts`)
 
@@ -89,6 +90,26 @@ construction, still / instantaneous / collected compositions, reflux, boil-up
 and recovery follow. The flowsheet's **batch still** uses the same engine
 (inlet = charge per cycle, outlets = receiver and residue at the chosen cut) and
 can open the workbench pre-filled.
+
+### Distillation lines (`engine/ternary/`)
+
+Three components on one triangle, at total reflux (x_{n+1} = y*(x_n), every
+point a stage):
+
+- **Systems:** n-hexane / cyclohexane / n-heptane (ideal, zeotropic reference)
+  and acetone / chloroform / methanol (Wilson). Each Wilson binary is fitted to
+  its literature azeotrope at 1 atm; the ternary saddle azeotrope is then a
+  *prediction* — 57.3 °C at (0.355, 0.213, 0.432) vs. ≈ 57.5 °C in the literature.
+- **Singular points** found and classified from the stage map's Jacobian
+  (light node / heavy node / saddle); **border lines** traced from saddle
+  eigen-directions; the field seeded from heavy nodes and saddles, with arrows
+  towards rising temperature.
+- **Product regions** for a feed: between the distillation line through F and
+  the direct / indirect splits, closed along the triangle edges or a border line.
+- **Column at total reflux:** drag F and D; B follows from the material balance
+  on the D–F line, chosen so that D and B share a distillation line; stage count
+  and D/F are reported. *Snap D onto the line* iterates to a consistent split.
+- Pressure slider moves the azeotropes (ternary saddle 51.5 °C at ≈ 0.81 bar).
 
 ## Data contract
 

@@ -9,6 +9,7 @@ import { useRoute } from '@/lib/route';
 
 const McCabeThielePage = lazy(() => import('@/pages/McCabeThielePage'));
 const BatchPage = lazy(() => import('@/pages/BatchPage'));
+const DistillationLinesPage = lazy(() => import('@/pages/DistillationLinesPage'));
 
 export default function App() {
   const { route, params } = useRoute();
@@ -27,7 +28,13 @@ export default function App() {
         ) : (
           <Suspense fallback={<div className="glass flex-1 animate-pulse" aria-busy="true" />}>
             <main className="relative min-h-0 flex-1 overflow-y-auto">
-              {route === 'mccabe-thiele' ? <McCabeThielePage params={params} /> : <BatchPage params={params} />}
+              {route === 'mccabe-thiele' ? (
+                <McCabeThielePage params={params} />
+              ) : route === 'batch' ? (
+                <BatchPage params={params} />
+              ) : (
+                <DistillationLinesPage />
+              )}
             </main>
           </Suspense>
         )}

@@ -70,11 +70,25 @@ export function Toggle({ checked, onChange, label }: { checked: boolean; onChang
   );
 }
 
-export function Kpi({ label, value, unit, sub, tone = 'default' }: { label: string; value: string; unit?: string; sub?: ReactNode; tone?: 'default' | 'muted' }) {
+export function Kpi({
+  label,
+  value,
+  unit,
+  sub,
+  tone = 'default',
+  small = false,
+}: {
+  label: string;
+  value: string;
+  unit?: string;
+  sub?: ReactNode;
+  tone?: 'default' | 'muted';
+  small?: boolean;
+}) {
   return (
     <div className="glass min-w-0 px-3 py-2.5">
       <p className="tag truncate text-plant-500">{label}</p>
-      <p className={cn('readout mt-0.5 text-lg', tone === 'muted' ? 'text-plant-500' : 'text-plant-100')}>
+      <p className={cn('readout mt-0.5 truncate', small ? 'py-1 text-sm' : 'text-lg', tone === 'muted' ? 'text-plant-500' : 'text-plant-100')}>
         {value}
         {unit && <span className="ml-1 text-[10px] text-plant-500">{unit}</span>}
       </p>
