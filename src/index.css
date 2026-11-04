@@ -1,0 +1,99 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 215 33% 4%;
+    --foreground: 210 30% 90%;
+    --muted: 214 25% 14%;
+    --muted-foreground: 213 15% 60%;
+    --accent: 214 25% 16%;
+    --accent-foreground: 210 30% 92%;
+    --primary: 172 66% 50%;
+    --primary-foreground: 215 33% 6%;
+    --border: 214 22% 18%;
+    --input: 214 22% 20%;
+    --ring: 172 66% 50%;
+    --radius: 0.5rem;
+  }
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-plant-950 font-sans text-foreground antialiased;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+  * {
+    @apply border-border;
+  }
+}
+
+@layer components {
+  .glass {
+    @apply rounded-lg border border-white/[0.06] bg-plant-900/70 shadow-glass backdrop-blur-xl;
+  }
+  .tag {
+    @apply font-mono text-[10px] font-semibold uppercase tracking-[0.14em];
+  }
+  .readout {
+    @apply font-mono tabular-nums;
+  }
+}
+
+/* ---------- React Flow: strip defaults, re-skin for control room ---------- */
+.react-flow {
+  --xy-background-color: transparent;
+  --xy-node-border-radius: 0;
+  --xy-edge-stroke: #3a4b60;
+  --xy-connectionline-stroke: #2dd4bf;
+  --xy-attribution-background-color: transparent;
+}
+.react-flow__node {
+  /* custom nodes draw everything themselves */
+  background: transparent;
+  border: none;
+  padding: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.react-flow__handle {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  border: 1.5px solid #5c7089;
+  background: #0a0f15;
+  transition: all 120ms ease;
+}
+.react-flow__handle:hover,
+.react-flow__handle.connectingto {
+  border-color: #2dd4bf;
+  background: #2dd4bf;
+  box-shadow: 0 0 10px #2dd4bf;
+}
+.react-flow__handle.connectingfrom {
+  border-color: #fbbf24;
+}
+.react-flow__controls {
+  @apply glass overflow-hidden !shadow-glass;
+}
+.react-flow__controls-button {
+  background: transparent;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  fill: #8798ad;
+}
+.react-flow__controls-button:hover {
+  background: rgba(45, 212, 191, 0.1);
+  fill: #2dd4bf;
+}
+.react-flow__minimap {
+  @apply glass overflow-hidden;
+}
+.react-flow__attribution {
+  display: none;
+}
+.react-flow__edge.selected .stream-pipe {
+  filter: drop-shadow(0 0 6px currentColor);
+}
