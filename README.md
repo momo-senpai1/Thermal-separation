@@ -4,7 +4,7 @@ Browser-based, interactive P&ID / flowsheet simulator for thermal separation
 processes (distillation, extraction/absorption, crystallisation, chromatography).
 
 **Stack:** React 18 · TypeScript · Vite · Tailwind CSS · shadcn/ui · `@xyflow/react` · Zustand
-(Tremor + Recharts arrive in Phase 4).
+· Tremor + Recharts (analysis panel).
 
 ```bash
 npm install
@@ -20,7 +20,7 @@ npm test           # engine unit tests (vitest)
 | 1 | React Flow canvas, custom P&ID nodes (Feed, Mixer, Heater, Column), Zustand store | ✅ |
 | 2 | `thermodynamics.ts` — Raoult/Dalton VLE, Antoine, enthalpy balances | ✅ |
 | 3 | Engine ↔ UI: unit solve in topological order, live stream propagation | ✅ |
-| 4 | McCabe–Thiele side panel (Tremor/Recharts) on column selection | ⏳ |
+| 4 | McCabe–Thiele side panel (Tremor/Recharts) on column selection | ✅ |
 
 ## Data contract
 
@@ -80,6 +80,25 @@ Each unit reports `ok / warning / error / idle` diagnostics (status LED on the n
 Validation (benzene/toluene, 1 atm, z = 0.5): bubble 92.1 °C, y = 0.714,
 dew 98.8 °C, α̅ = 2.47 — matching textbook values.
 
+## Column analysis panel (`components/analysis/`)
+
+Selecting a distillation node docks a panel beside the canvas (lazy-loaded):
+
+- **KPI cards** (Tremor): distillate / bottoms purity, R/Rmin with an
+  optimum-range badge, reboiler and condenser duty, feed stage and q.
+- **McCabe–Thiele** (Recharts): constant-α equilibrium curve, y = x, rectifying
+  (solid) and stripping (dashed) operating lines, q-line to the equilibrium
+  pinch, stage staircase from x_D to x_B, highlighted feed stage, hover tooltip
+  per stage. A partial condenser appears as the first step.
+- **T–x–y**: rigorous Raoult envelope at column pressure with crosshair tooltip
+  and the F / D / B stream points.
+- **Stage table**: x, y and bubble-point temperature per stage (table view of
+  the diagram).
+
+Everything is driven by the store, so the panel redraws as sliders move.
+Chart colours were validated for colour-vision deficiency on the dark surface
+(`vizTokens.ts`); line style and direct labels carry identity alongside colour.
+
 ## Layout
 
 ```
@@ -90,6 +109,7 @@ src/
   nodes/                    custom P&ID nodes (SVG symbols, glass instrument cards)
   edges/StreamEdge.tsx      phase-coloured pipe with live data tag
   components/               palette, inspector (shadcn sliders), status bar, canvas
+  components/analysis/      McCabe–Thiele, T–x–y, stage table, KPI panel + chart data builders
 ```
 
 ## References

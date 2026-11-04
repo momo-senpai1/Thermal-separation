@@ -1,4 +1,5 @@
 import { ReactFlowProvider } from '@xyflow/react';
+import { AnalysisDock } from '@/components/analysis/AnalysisDock';
 import { FlowCanvas } from '@/components/FlowCanvas';
 import { Inspector } from '@/components/Inspector';
 import { Palette } from '@/components/Palette';
@@ -14,6 +15,7 @@ export default function App() {
         <main className="relative flex min-h-0 flex-1 gap-2">
           <Palette />
           <FlowCanvas />
+          <AnalysisDock />
           <Inspector />
         </main>
       </div>
