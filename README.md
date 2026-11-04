@@ -10,6 +10,7 @@ processes (distillation, extraction/absorption, crystallisation, chromatography)
 npm install
 npm run dev        # http://localhost:5173
 npm run build      # type-check + production bundle
+npm test           # engine unit tests (vitest)
 ```
 
 ## Roadmap
@@ -17,7 +18,7 @@ npm run build      # type-check + production bundle
 | Phase | Scope | Status |
 |---|---|---|
 | 1 | React Flow canvas, custom P&ID nodes (Feed, Mixer, Heater, Column), Zustand store | ✅ |
-| 2 | `thermodynamics.ts` — Raoult/Dalton VLE, Antoine, enthalpy balances | ⏳ |
+| 2 | `thermodynamics.ts` — Raoult/Dalton VLE, Antoine, enthalpy balances | ✅ |
 | 3 | Engine ↔ UI: unit solve in topological order, live stream propagation | ⏳ |
 | 4 | McCabe–Thiele side panel (Tremor/Recharts) on column selection | ⏳ |
 
@@ -41,11 +42,37 @@ optional `params.condenserType` (`total` = 0 equilibrium stages, `partial` = 1).
 `useFlowsheet.getState().getUnitPayloads()` / `getStreamPayloads()` serialise the
 canvas to exactly this schema.
 
+## Thermodynamics engine (`src/engine/`)
+
+Ideal property package: ideal liquid (γ = 1) + ideal gas, Raoult/Dalton
+K-values `Kᵢ = Pᵢ°(T)/P`, Antoine vapour pressures. Enthalpy reference is the
+pure liquid at 298.15 K; latent heat follows Kirchhoff's law from ΔHvap(Tb).
+
+| Function | Purpose |
+|---|---|
+| `vaporPressure`, `saturationTemperature` | Antoine P°(T) and its analytic inverse |
+| `bubbleTemperature`, `dewTemperature`, `bubblePressure`, `dewPressure` | Saturation points |
+| `relativeVolatility`, `averageRelativeVolatility` | α(T) and column-average α |
+| `yFromAlpha`, `xFromAlpha`, `equilibriumCurveAlpha`, `txyDiagram` | Equilibrium curves |
+| `flashTP` (Rachford–Rice), `flashPH` | Isothermal and isenthalpic flash |
+| `thermalCondition`, `stateFromThermalCondition` | Feed q ↔ (T, β) |
+| `mixStreams`, `heatStream` | Adiabatic mixer and heater/cooler balances |
+| `validityWarnings` | Antoine-range / Tc diagnostics |
+
+Core functions take composition vectors (multicomponent-ready for MESH);
+`binaryComponents`, `toVector`, `toBinary` adapt to the `{ compA, compB }` schema.
+Components: benzene, toluene, n-hexane, n-heptane (default system benzene/toluene).
+Polar/associating mixtures are excluded — Raoult's law does not apply to them.
+
+Validation (benzene/toluene, 1 atm, z = 0.5): bubble 92.1 °C, y = 0.714,
+dew 98.8 °C, α̅ = 2.47 — matching textbook values.
+
 ## Layout
 
 ```
 src/
   types/process.ts          schema + port definitions
+  engine/                   thermodynamics.ts, components.ts, numerics.ts + tests
   store/flowsheetStore.ts   Zustand store, propagation hook, demo flowsheet
   nodes/                    custom P&ID nodes (SVG symbols, glass instrument cards)
   edges/StreamEdge.tsx      phase-coloured pipe with live data tag
