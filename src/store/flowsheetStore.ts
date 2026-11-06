@@ -10,7 +10,10 @@ import {
   type XYPosition,
 } from '@xyflow/react';
 import { create } from 'zustand';
+import { DEFAULT_SYSTEM, type BinarySystem, type ComponentId } from '@/engine/components';
 import { solveFlowsheet } from '@/engine/flowsheet';
+import { binaryPackage, orderPair, pairModel } from '@/engine/propertyPackage';
+import { bubbleTemperature } from '@/engine/thermodynamics';
 import {
   type StreamConditions,
   type StreamEdgeData,
@@ -34,6 +37,7 @@ const TAG_SERIES: Record<UnitType, { prefix: string; base: number; label: string
   heater: { prefix: 'E', base: 300, label: 'Heater' },
   distillation: { prefix: 'T', base: 400, label: 'Distillation Column' },
   batch: { prefix: 'B', base: 500, label: 'Batch Still' },
+  flash: { prefix: 'V', base: 600, label: 'Flash Drum' },
 };
 
 const DEFAULT_PARAMS: Record<UnitType, UnitParams> = {
@@ -47,6 +51,7 @@ const DEFAULT_PARAMS: Record<UnitType, UnitParams> = {
     condenserType: 'total',
     distillateToFeed: 0.42,
   },
+  flash: { theoreticalStages: 0, refluxRatio: 0, heatDuty: 400, flashPressure: 101.325 },
   batch: {
     theoreticalStages: 5,
     refluxRatio: 3,
@@ -113,8 +118,11 @@ function makeUnit(type: UnitType, position: XYPosition, nodes: UnitNode[]): Unit
 // unit states, diagnostics and stream conditions back in one atomic update.
 // ---------------------------------------------------------------------------
 
+/** The binary property package the whole flowsheet runs on. */
+let currentSystem: BinarySystem = DEFAULT_SYSTEM;
+
 function solve(nodes: UnitNode[], edges: StreamEdge[]) {
-  const sol = solveFlowsheet(nodes, edges);
+  const sol = solveFlowsheet(nodes, edges, currentSystem);
   const solvedNodes = nodes.map((n) => {
     const u = sol.units.get(n.id);
     if (!u) return n;
@@ -130,7 +138,7 @@ function solve(nodes: UnitNode[], edges: StreamEdge[]) {
       : { ...EMPTY_STREAM, tag, resolved: false };
     return { ...e, data };
   });
-  return { nodes: solvedNodes, edges: solvedEdges, lastSolveMs: sol.elapsedMs };
+  return { nodes: solvedNodes, edges: solvedEdges, lastSolveMs: sol.elapsedMs, system: currentSystem };
 }
 
 // ---------------------------------------------------------------------------
@@ -142,6 +150,14 @@ export interface FlowsheetState {
   edges: StreamEdge[];
   /** wall-clock time of the last engine pass, ms */
   lastSolveMs: number;
+  /** feed components (A = more volatile) */
+  system: BinarySystem;
+  /**
+   * Switch the feed materials. Returns an error message (and changes nothing)
+   * when the pair has no validated model; on success every feed is moved to its
+   * bubble point so the flowsheet starts from saturated liquid.
+   */
+  setSystem: (a: ComponentId, b: ComponentId) => string | null;
 
   onNodesChange: (changes: NodeChange<UnitNode>[]) => void;
   onEdgesChange: (changes: EdgeChange<StreamEdge>[]) => void;
@@ -251,7 +267,16 @@ export const useFlowsheet = create<FlowsheetState>()((set, get) => {
       );
     },
 
-    addUnit: (type, position) => commit([...get().nodes, makeUnit(type, position, get().nodes)]),
+    addUnit: (type, position) => {
+      const unit = makeUnit(type, position, get().nodes);
+      // a new feed starts as saturated liquid of the current system
+      const f = unit.data.state.topProduct;
+      if (type === 'feed' && f) {
+        f.temperature = bubbleTemperature(binaryPackage(currentSystem), [f.molarFractions.compA, f.molarFractions.compB], f.pressure).T;
+        f.vaporFraction = 1;
+      }
+      commit([...get().nodes, unit]);
+    },
 
     updateNodeParams: (id, params) =>
       patchNode(id, (d) => ({ ...d, params: { ...d.params, ...params } })),
@@ -271,7 +296,25 @@ export const useFlowsheet = create<FlowsheetState>()((set, get) => {
         return { ...d, state: { ...d.state, topProduct: next } };
       }),
 
-    resetDemo: () => set(demoFlowsheet()),
+    resetDemo: () => {
+      currentSystem = DEFAULT_SYSTEM;
+      set(demoFlowsheet());
+    },
+
+    setSystem: (a, b) => {
+      const m = pairModel(a, b);
+      if (m.kind === 'refused') return m.reason;
+      currentSystem = orderPair(a, b);
+      const comps = binaryPackage(currentSystem);
+      const nodes = get().nodes.map((n) => {
+        if (n.type !== 'feed' || !n.data.state.topProduct) return n;
+        const f = n.data.state.topProduct;
+        const T = bubbleTemperature(comps, [f.molarFractions.compA, f.molarFractions.compB], f.pressure).T;
+        return { ...n, data: { ...n.data, state: { ...n.data.state, topProduct: { ...f, temperature: T, vaporFraction: 1 } } } };
+      });
+      commit(nodes);
+      return null;
+    },
 
     getUnitPayloads: () =>
       get().nodes.map((n) => ({

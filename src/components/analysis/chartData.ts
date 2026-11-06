@@ -3,9 +3,9 @@
  * Kept free of React so the geometry can be unit-tested.
  */
 
-import { COMPONENTS, type BinarySystem } from '@/engine/components';
+import type { BinarySystem } from '@/engine/components';
 import { linspace } from '@/engine/numerics';
-import { bubbleTemperature, dewTemperature, yFromAlpha } from '@/engine/thermodynamics';
+import { binaryComponents, bubbleTemperature, dewTemperature, yFromAlpha } from '@/engine/thermodynamics';
 import type { ColumnResults } from '@/types/process';
 
 export interface Pt {
@@ -35,7 +35,9 @@ export interface McCabeThieleSeries {
 }
 
 export function buildMcCabeThiele(c: ColumnResults, n = 121): McCabeThieleSeries {
-  const equilibrium = linspace(0, 1, n).map((x) => ({ x, y: yFromAlpha(c.alpha, x) }));
+  const equilibrium = c.curve
+    ? c.curve.x.map((x, i) => ({ x, y: c.curve!.y[i]! }))
+    : linspace(0, 1, n).map((x) => ({ x, y: yFromAlpha(c.alpha, x) }));
   const { xD, xB, zF, intersection: I } = c;
 
   const staircase: Pt[] = [{ x: xD, y: xD }];
@@ -89,7 +91,7 @@ export interface TxyRow {
 
 /** Isobaric T–x–y envelope on a shared composition grid (one row per x → crosshair tooltip). */
 export function buildTxy(sys: BinarySystem, P: number, n = 61): TxyRow[] {
-  const comps = [COMPONENTS[sys.A], COMPONENTS[sys.B]];
+  const comps = binaryComponents(sys);
   return linspace(0, 1, n).map((x) => ({
     x,
     bubble: bubbleTemperature(comps, [x, 1 - x], P).T - 273.15,
@@ -107,7 +109,7 @@ export interface StageRow {
 }
 
 export function buildStageTable(c: ColumnResults, sys: BinarySystem, P: number): StageRow[] {
-  const comps = [COMPONENTS[sys.A], COMPONENTS[sys.B]];
+  const comps = binaryComponents(sys);
   const label = (s: ColumnResults['steps'][number]) =>
     s.section === 'condenser'
       ? 'Partial condenser'

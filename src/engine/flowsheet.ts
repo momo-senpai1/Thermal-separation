@@ -24,6 +24,8 @@ import { alphaSystem } from './vle/systems';
 import {
   averageRelativeVolatility,
   binaryComponents,
+  binaryEquilibrium,
+  type Comps,
   bubbleTemperature,
   dewTemperature,
   enthalpyTP,
@@ -98,7 +100,6 @@ const withWarnings = (messages: string[]): Diagnostics => ({
 // Unit models
 // ---------------------------------------------------------------------------
 
-type Comps = ReturnType<typeof binaryComponents>;
 
 function solveFeed(comps: Comps, data: UnitNodeData): UnitSolution {
   const spec = data.state.topProduct;
@@ -137,15 +138,57 @@ function solveHeater(comps: Comps, data: UnitNodeData, inlet: StreamConditions):
   };
 }
 
+/**
+ * Flash drum: heat the inlet by Q (kW) and let it down to the drum pressure
+ * (PH flash), then split into saturated vapour (top) and liquid (bottom).
+ */
+function solveFlash(comps: Comps, data: UnitNodeData, inlet: StreamConditions): UnitSolution {
+  const P = data.params.flashPressure ?? inlet.pressure;
+  const out = heatStream(comps, toMaterial(inlet), data.params.heatDuty, inlet.pressure - P);
+  const V = out.F * out.beta;
+  const warnings = validityWarnings(comps, out.T);
+  if (out.phase !== 'two-phase') warnings.push(out.phase === 'liquid' ? 'Single phase: all liquid — raise Q or lower P.' : 'Single phase: all vapour — lower Q or raise P.');
+  return {
+    state: {
+      topProduct: { flowRate: V, temperature: out.T, pressure: P, vaporFraction: 0, molarFractions: toBinary(out.y) },
+      bottomProduct: { flowRate: out.F - V, temperature: out.T, pressure: P, vaporFraction: 1, molarFractions: toBinary(out.x) },
+    },
+    diag: withWarnings(warnings),
+    column: null,
+  };
+}
+
+/** Equilibrium curve per (package, pressure), cached — the grid costs a few hundred bubble points. */
+const eqCache = new Map<string, ReturnType<typeof binaryEquilibrium>>();
+function equilibriumFor(comps: Comps, P: number) {
+  const k = `${comps.map((c) => c.id).join('|')}@${P.toFixed(3)}`;
+  let e = eqCache.get(k);
+  if (!e) {
+    if (eqCache.size > 64) eqCache.clear();
+    e = binaryEquilibrium(comps, P);
+    eqCache.set(k, e);
+  }
+  return e;
+}
+
+/** Relative volatility at a composition, from the package. */
+function alphaAt(comps: Comps, x: number, P: number) {
+  const y = bubbleTemperature(comps, [x, 1 - x], P).y[0]!;
+  return (y / x) / ((1 - y) / (1 - x));
+}
+
 function solveColumn(comps: Comps, data: UnitNodeData, feed: StreamConditions): UnitSolution {
-  const [light, heavy] = comps as [Comps[number], Comps[number]];
+  const [light, heavy] = comps as unknown as [Comps[number], Comps[number]];
   const P = feed.pressure;
   const zF = feed.molarFractions.compA;
   const q = feed.vaporFraction;
   const partial = (data.params.condenserType ?? 'total') === 'partial';
-  const alpha = averageRelativeVolatility(light, heavy, P);
+  // ideal packages keep the constant-α construction; activity models use the real curve
+  const eq = comps.gamma ? equilibriumFor(comps, P) : undefined;
+  const alpha = eq ? alphaAt(comps, Math.min(Math.max(zF, 1e-3), 1 - 1e-3), P) : averageRelativeVolatility(light, heavy, P);
 
   const mt = rateColumn({
+    eq,
     alpha,
     F: feed.flowRate,
     zF,
@@ -214,6 +257,10 @@ function solveColumn(comps: Comps, data: UnitNodeData, feed: StreamConditions): 
       stripping: mt.stripping,
       intersection: mt.intersection,
       pinch: mt.pinch,
+      // the equilibrium curve the stages were stepped on (for the McCabe–Thiele chart)
+      curve: eq
+        ? { x: eq.grid.x.filter((_, i) => i % 4 === 0), y: eq.grid.y.filter((_, i) => i % 4 === 0) }
+        : null,
     },
   };
 }
@@ -224,12 +271,14 @@ function solveColumn(comps: Comps, data: UnitNodeData, feed: StreamConditions): 
  * (distillate) and the pot residue at the chosen cut D/L₀, at their bubble points.
  */
 function solveBatchStill(comps: Comps, data: UnitNodeData, charge: StreamConditions): UnitSolution {
-  const [light, heavy] = comps as [Comps[number], Comps[number]];
+  const [light, heavy] = comps as unknown as [Comps[number], Comps[number]];
   const P = charge.pressure;
-  const alpha = averageRelativeVolatility(light, heavy, P);
+  const eq = comps.gamma ? equilibriumFor(comps, P) : undefined;
+  const alpha = eq ? alphaAt(comps, Math.min(Math.max(charge.molarFractions.compA, 1e-3), 1 - 1e-3), P) : averageRelativeVolatility(light, heavy, P);
   const mode = data.params.batchMode ?? 'constant-reflux';
   const sim = simulateBatch({
-    y: alphaSystem(alpha).y,
+    y: eq ? eq.y : alphaSystem(alpha).y,
+    xMax: eq?.xMax,
     x0: charge.molarFractions.compA,
     mode,
     N: data.params.theoreticalStages,
@@ -326,6 +375,7 @@ export function solveFlowsheet(
         if (type === 'mixer') sol = solveMixer(comps, ins);
         else if (type === 'heater') sol = solveHeater(comps, node.data, ins[0]!);
         else if (type === 'batch') sol = solveBatchStill(comps, node.data, ins[0]!);
+        else if (type === 'flash') sol = solveFlash(comps, node.data, ins[0]!);
         else sol = solveColumn(comps, node.data, ins[0]!);
       }
     } catch (err) {

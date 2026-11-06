@@ -25,8 +25,19 @@
 import { brent, ConvergenceError } from './numerics';
 import { xFromAlpha, yFromAlpha } from './thermodynamics';
 
+/** A general binary equilibrium curve (light-key y*(x) and its inverse up to xMax). */
+export interface EquilibriumCurve {
+  y: (x: number) => number;
+  x: (y: number) => number;
+  /** upper end of the usable branch: a minimum-boiling azeotrope, else 1 */
+  xMax: number;
+}
+
 export interface ColumnSpec {
+  /** constant relative volatility — used when no `eq` curve is given */
   alpha: number;
+  /** real equilibrium curve (non-ideal / azeotropic packages) */
+  eq?: EquilibriumCurve;
   /** feed molar flow, kmol/h */
   F: number;
   /** feed light-key fraction */
@@ -88,6 +99,43 @@ export interface McCabeThieleResult {
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
+const curveOf = (s: { alpha: number; eq?: EquilibriumCurve }): EquilibriumCurve =>
+  s.eq ?? { y: (x) => yFromAlpha(s.alpha, x), x: (y) => xFromAlpha(s.alpha, y), xMax: 1 };
+
+/** q-line pinch on a general curve. */
+export function qLinePinchCurve(eq: EquilibriumCurve, zF: number, q: number): { x: number; y: number } {
+  if (Math.abs(q - 1) < 1e-12) return { x: zF, y: eq.y(zF) };
+  const x = brent((x) => q * x + (1 - q) * eq.y(x) - zF, 0, eq.xMax, { tol: 1e-13 });
+  return { x, y: eq.y(x) };
+}
+
+/**
+ * Minimum reflux on a general curve: the rectifying line from (x_D, x_D) may not
+ * cross the curve between the q-line pinch and x_D (tangent pinch included).
+ */
+export function minimumRefluxCurve(eq: EquilibriumCurve, zF: number, q: number, xD: number): number {
+  const p = qLinePinchCurve(eq, zF, q);
+  let s = (xD - p.y) / (xD - p.x);
+  for (let i = 1; i < 400; i++) {
+    const x = p.x + ((xD - p.x) * i) / 400;
+    if (x >= xD) break;
+    s = Math.max(s, (xD - eq.y(x)) / (xD - x));
+  }
+  return Math.max(0, s / (1 - s));
+}
+
+/** Minimum stages at total reflux by stepping between curve and diagonal (fractional). */
+export function totalRefluxStages(eq: EquilibriumCurve, xD: number, xB: number): number {
+  let x = xD;
+  for (let n = 1; n <= 500; n++) {
+    const xn = eq.x(x);
+    if (xn <= xB) return n - 1 + (x - xB) / (x - xn);
+    if (x - xn < 1e-12) return Number.POSITIVE_INFINITY;
+    x = xn;
+  }
+  return Number.POSITIVE_INFINITY;
+}
+
 /** Point where the q-line meets the equilibrium curve: q·x + (1−q)·y_eq(x) = z_F. */
 export function qLinePinch(alpha: number, zF: number, q: number): { x: number; y: number } {
   if (Math.abs(q - 1) < 1e-12) return { x: zF, y: yFromAlpha(alpha, zF) };
@@ -143,7 +191,7 @@ function stepColumn(s: ColumnSpec, xD: number): Profile {
   let y: number;
   let xReflux = xD;
   if (s.condenser === 'partial') {
-    xReflux = xFromAlpha(s.alpha, xD);
+    xReflux = curveOf(s).x(xD);
     steps.push({ stage: 0, x: xReflux, y: xD, section: 'condenser' });
     y = rect.slope * xReflux + rect.intercept;
   } else {
@@ -155,7 +203,7 @@ function stepColumn(s: ColumnSpec, xD: number): Profile {
   let feedStage = s.N + 1;
   let x = xD;
   for (let n = 1; n <= s.N; n++) {
-    x = clamp01(xFromAlpha(s.alpha, clamp01(y)));
+    x = clamp01(curveOf(s).x(clamp01(y)));
     // optimal feed location: switch lines on the stage that crosses the intersection
     if (section === 'rectifying' && x <= xInt) {
       section = 'stripping';
@@ -175,7 +223,9 @@ function stepColumn(s: ColumnSpec, xD: number): Profile {
 
 export function rateColumn(spec: ColumnSpec): McCabeThieleResult {
   const { alpha, F, zF, q, N, R, DF } = spec;
-  if (!(alpha > 1)) throw new RangeError('Relative volatility must exceed 1 (A must be the light key).');
+  if (!spec.eq && !(alpha > 1)) throw new RangeError('Relative volatility must exceed 1 (A must be the light key).');
+  const eq = curveOf(spec);
+  if (!(zF < eq.xMax)) throw new RangeError('The feed lies at or beyond the azeotrope — the column cannot pass it.');
   if (!(F > 0)) throw new RangeError('Column has no feed flow.');
   if (!(zF > 0 && zF < 1)) throw new RangeError('Feed must contain both components (0 < z_F < 1).');
   if (!(DF > 0 && DF < 1)) throw new RangeError('D/F must lie strictly between 0 and 1.');
@@ -185,7 +235,7 @@ export function rateColumn(spec: ColumnSpec): McCabeThieleResult {
   // feasible x_D: above z_F, and x_B = (z_F − D/F·x_D)/(1 − D/F) ≥ 0
   const eps = 1e-10;
   const lo = zF + eps;
-  const hi = Math.min(1, zF / DF) - eps;
+  const hi = Math.min(eq.xMax, zF / DF) - eps;
   const residual = (xD: number) => {
     const p = stepColumn(spec, xD);
     const xB = (zF - DF * xD) / (1 - DF);
@@ -211,9 +261,9 @@ export function rateColumn(spec: ColumnSpec): McCabeThieleResult {
     rectifying: p.rect,
     stripping: p.strip,
     intersection: { x: p.xInt, y: p.rect.slope * p.xInt + p.rect.intercept },
-    pinch: qLinePinch(alpha, zF, q),
-    Rmin: minimumReflux(alpha, zF, q, xD),
-    Nmin: fenskeMinimumStages(alpha, xD, xB),
+    pinch: spec.eq ? qLinePinchCurve(eq, zF, q) : qLinePinch(alpha, zF, q),
+    Rmin: spec.eq ? minimumRefluxCurve(eq, zF, q, xD) : minimumReflux(alpha, zF, q, xD),
+    Nmin: spec.eq ? totalRefluxStages(eq, xD, xB) : fenskeMinimumStages(alpha, xD, xB),
     xReflux: p.xReflux,
     yTop: p.yTop,
   };

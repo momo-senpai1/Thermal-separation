@@ -6,13 +6,23 @@
  *   cpL, cpV  — mean liquid / ideal-gas heat capacity, J/(mol·K), ~298–400 K
  *   dHvap     — enthalpy of vaporisation at the normal boiling point Tb, J/mol
  *
- * The selection is restricted to non-polar hydrocarbons whose binary pairs are
- * well described by Raoult's law (ideal liquid + ideal gas). Polar / associating
- * systems (alcohol–water, etc.) need an activity-coefficient model and are
- * deliberately not offered.
+ * Which pairs may be combined, and with which activity model, is decided in
+ * `propertyPackage.ts`: ideal for similar hydrocarbons, Wilson for the
+ * validated polar pairs, refused where the liquids split or no validated
+ * parameters exist.
  */
 
-export type ComponentId = 'benzene' | 'toluene' | 'n-hexane' | 'n-heptane';
+export type ComponentId =
+  | 'benzene'
+  | 'toluene'
+  | 'n-hexane'
+  | 'n-heptane'
+  | 'cyclohexane'
+  | 'p-xylene'
+  | 'water'
+  | 'methanol'
+  | 'ethanol'
+  | 'acetone';
 
 export interface PureComponent {
   id: ComponentId;
@@ -50,6 +60,36 @@ export const COMPONENTS: Record<ComponentId, PureComponent> = {
     id: 'n-heptane', name: 'n-Heptane', formula: 'C7H16', mw: 100.2,
     antoine: { A: 6.89677, B: 1264.9, C: 216.54, Tmin: -2, Tmax: 124 },
     Tb: 371.58, Tc: 540.2, cpL: 224.6, cpV: 165.9, dHvap: 31770,
+  },
+  cyclohexane: {
+    id: 'cyclohexane', name: 'Cyclohexane', formula: 'C6H12', mw: 84.16,
+    antoine: { A: 6.8413, B: 1201.53, C: 222.65, Tmin: 20, Tmax: 81 },
+    Tb: 353.87, Tc: 553.6, cpL: 156.0, cpV: 106.3, dHvap: 29970,
+  },
+  'p-xylene': {
+    id: 'p-xylene', name: 'p-Xylene', formula: 'C8H10', mw: 106.17,
+    antoine: { A: 6.99052, B: 1453.43, C: 215.307, Tmin: 27, Tmax: 166 },
+    Tb: 411.5, Tc: 616.2, cpL: 181.7, cpV: 126.4, dHvap: 35670,
+  },
+  water: {
+    id: 'water', name: 'Water', formula: 'H2O', mw: 18.015,
+    antoine: { A: 8.07131, B: 1730.63, C: 233.426, Tmin: 1, Tmax: 100 },
+    Tb: 373.15, Tc: 647.1, cpL: 75.3, cpV: 33.6, dHvap: 40660,
+  },
+  methanol: {
+    id: 'methanol', name: 'Methanol', formula: 'CH3OH', mw: 32.04,
+    antoine: { A: 8.08097, B: 1582.271, C: 239.726, Tmin: 15, Tmax: 84 },
+    Tb: 337.7, Tc: 512.6, cpL: 81.1, cpV: 44.1, dHvap: 35210,
+  },
+  ethanol: {
+    id: 'ethanol', name: 'Ethanol', formula: 'C2H5OH', mw: 46.07,
+    antoine: { A: 8.20417, B: 1642.89, C: 230.3, Tmin: -57, Tmax: 80 },
+    Tb: 351.44, Tc: 513.9, cpL: 112.3, cpV: 65.6, dHvap: 38560,
+  },
+  acetone: {
+    id: 'acetone', name: 'Acetone', formula: 'C3H6O', mw: 58.08,
+    antoine: { A: 7.11714, B: 1210.595, C: 229.664, Tmin: -13, Tmax: 55 },
+    Tb: 329.2, Tc: 508.1, cpL: 126.3, cpV: 74.5, dHvap: 29100,
   },
 };
 

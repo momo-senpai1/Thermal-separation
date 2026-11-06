@@ -2,6 +2,7 @@ import { RotateCcw } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { navigate, type Route } from '@/lib/route';
+import { COMPONENTS } from '@/engine/components';
 import { useFlowsheet } from '@/store/flowsheetStore';
 
 const NAV: { route?: Route; label: string; group: string }[] = [
@@ -65,6 +66,7 @@ function FlowsheetStatus() {
   const streams = useFlowsheet((s) => s.edges.length);
   const resolved = useFlowsheet((s) => s.edges.filter((e) => e.data?.resolved).length);
   const resetDemo = useFlowsheet((s) => s.resetDemo);
+  const system = useFlowsheet((s) => s.system);
   const ms = useFlowsheet((s) => s.lastSolveMs);
   const errors = useFlowsheet((s) => s.nodes.filter((n) => n.data.diag?.status === 'error').length);
   const warnings = useFlowsheet((s) => s.nodes.filter((n) => n.data.diag?.status === 'warning').length);
@@ -72,7 +74,7 @@ function FlowsheetStatus() {
     <>
       <span className="hidden font-mono text-[10px] text-plant-400 xl:inline">
         <Stat label="UNITS" value={nodes} /> · <Stat label="STREAMS" value={`${resolved}/${streams}`} /> ·{' '}
-        <Stat label="SYSTEM" value="Benzene / Toluene" />
+        <Stat label="SYSTEM" value={`${COMPONENTS[system.A].name} / ${COMPONENTS[system.B].name}`} />
       </span>
       {(errors > 0 || warnings > 0) && (
         <span className="font-mono text-[10px]">

@@ -37,7 +37,7 @@ export type StreamPayload = StreamConditions & {
  * `feed` extends the original contract ('distillation' | 'mixer' | 'heater')
  * so that boundary streams can be specified on the canvas.
  */
-export type UnitType = 'feed' | 'mixer' | 'heater' | 'distillation' | 'batch';
+export type UnitType = 'feed' | 'mixer' | 'heater' | 'distillation' | 'batch' | 'flash';
 
 export type CondenserType = 'total' | 'partial';
 
@@ -57,6 +57,8 @@ export interface UnitParams {
    * 'q' → T is computed. At fixed P and z the two are not independent.
    */
   feedSpec?: FeedSpec;
+  /** Extension (flash drum): drum pressure, kPa (default: inlet pressure) */
+  flashPressure?: number;
   /** Extension (batch still): operating mode */
   batchMode?: 'rayleigh' | 'constant-reflux';
   /** Extension (batch still): distilled fraction D/L₀ at which the cut is taken */
@@ -113,6 +115,8 @@ export interface ColumnResults {
   stripping: { slope: number; intercept: number };
   intersection: { x: number; y: number };
   pinch: { x: number; y: number };
+  /** equilibrium curve used (non-ideal packages); null → constant α */
+  curve?: { x: number[]; y: number[] } | null;
 }
 
 export type UnitNodeData = {
@@ -152,8 +156,9 @@ export const PORTS = {
   heater: { inlets: ['in'] as const, outlets: ['out'] as const },
   distillation: { inlets: ['feed'] as const, outlets: ['distillate', 'bottoms'] as const },
   batch: { inlets: ['charge'] as const, outlets: ['distillate', 'residue'] as const },
+  flash: { inlets: ['in'] as const, outlets: ['vapor', 'liquid'] as const },
 } satisfies Record<UnitType, { inlets: readonly string[]; outlets: readonly string[] }>;
 
 /** Which unit-state slot an outlet port reads from. */
 export const outletSlot = (handle: string | null | undefined): keyof UnitState =>
-  handle === 'bottoms' || handle === 'residue' ? 'bottomProduct' : 'topProduct';
+  handle === 'bottoms' || handle === 'residue' || handle === 'liquid' ? 'bottomProduct' : 'topProduct';

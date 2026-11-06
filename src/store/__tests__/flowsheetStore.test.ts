@@ -108,3 +108,66 @@ describe('batch still equipment', () => {
     expect(st().nodes.find((n) => n.id === b.id)!.data.state.topProduct!.molarFractions.compA).toBeLessThan(xCol);
   });
 });
+
+describe('feed materials (property packages)', () => {
+  const col = () => st().nodes.find((n) => n.type === 'distillation')!;
+  it.each([
+    ['methanol', 'water'],
+    ['ethanol', 'water'],
+    ['acetone', 'methanol'],
+    ['n-hexane', 'n-heptane'],
+    ['toluene', 'p-xylene'],
+  ] as const)('%s / %s: every unit solves and the column closes its balance', (a, b) => {
+    expect(st().setSystem(a, b)).toBeNull();
+    for (const n of st().nodes) expect(['ok', 'warning']).toContain(n.data.diag?.status);
+    const c = col();
+    const feed = st().edges.find((e) => e.target === c.id)!.data!;
+    const { topProduct: D, bottomProduct: B } = c.data.state;
+    expect(D!.flowRate * D!.molarFractions.compA + B!.flowRate * B!.molarFractions.compA).toBeCloseTo(
+      feed.flowRate * feed.molarFractions.compA,
+      6,
+    );
+    expect(D!.molarFractions.compA).toBeGreaterThan(feed.molarFractions.compA);
+  });
+  it('orders the pair by volatility (A = lower boiling point)', () => {
+    st().setSystem('water', 'methanol');
+    expect(st().system).toEqual({ A: 'methanol', B: 'water' });
+  });
+  it('ethanol / water: the distillate cannot pass the azeotrope', () => {
+    st().setSystem('ethanol', 'water');
+    st().updateNodeParams(col().id, { refluxRatio: 15, theoreticalStages: 40 });
+    expect(col().data.state.topProduct!.molarFractions.compA).toBeLessThan(0.905);
+    expect(col().data.column!.curve).toBeTruthy();
+  });
+  it('refuses water / toluene (two liquid phases) and keeps the current system', () => {
+    st().setSystem('methanol', 'water');
+    const msg = st().setSystem('water', 'toluene');
+    expect(msg).toMatch(/two liquid phases/);
+    expect(st().system).toEqual({ A: 'methanol', B: 'water' });
+  });
+  it('switching moves feeds to their new bubble point', () => {
+    st().setSystem('acetone', 'methanol');
+    const f = st().nodes.find((n) => n.type === 'feed')!.data.state.topProduct!;
+    expect(f.temperature - 273.15).toBeGreaterThan(54);
+    expect(f.temperature - 273.15).toBeLessThan(65);
+  });
+});
+
+describe('flash drum', () => {
+  it('splits a heated feed into vapour and liquid that close both balances', () => {
+    st().setSystem('ethanol', 'water');
+    st().addUnit('feed', { x: 0, y: 700 });
+    st().addUnit('flash', { x: 300, y: 700 });
+    const f = st().nodes.filter((n) => n.type === 'feed').at(-1)!;
+    const v = st().nodes.find((n) => n.type === 'flash')!;
+    st().onConnect({ source: f.id, sourceHandle: 'out', target: v.id, targetHandle: 'in' });
+    const drum = st().nodes.find((n) => n.id === v.id)!;
+    expect(drum.data.diag?.status).toBe('ok');
+    const { topProduct: V, bottomProduct: L } = drum.data.state;
+    const F = f.data.state.topProduct!;
+    expect(V!.flowRate + L!.flowRate).toBeCloseTo(F.flowRate, 9);
+    expect(V!.flowRate * V!.molarFractions.compA + L!.flowRate * L!.molarFractions.compA).toBeCloseTo(F.flowRate * F.molarFractions.compA, 6);
+    expect(V!.molarFractions.compA).toBeGreaterThan(L!.molarFractions.compA); // vapour enriched in ethanol
+    expect(V!.temperature).toBeCloseTo(L!.temperature, 9);
+  });
+});

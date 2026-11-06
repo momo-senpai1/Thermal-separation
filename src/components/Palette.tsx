@@ -1,5 +1,6 @@
 import type { DragEvent } from 'react';
 import type { UnitType } from '@/types/process';
+import { MaterialPicker } from './MaterialPicker';
 
 export const DND_MIME = 'application/x-thermal-unit';
 
@@ -43,6 +44,18 @@ const ITEMS: { type: UnitType; tag: string; name: string; desc: string; icon: JS
     ),
   },
   {
+    type: 'flash',
+    tag: 'V',
+    name: 'Flash drum',
+    desc: 'Q, P → vapour + liquid',
+    icon: (
+      <>
+        <rect x="8" y="3" width="8" height="18" rx="4" />
+        <path d="M8 9h8M3 13h5M12 3V1M12 21v2" />
+      </>
+    ),
+  },
+  {
     type: 'batch',
     tag: 'B',
     name: 'Batch still',
@@ -63,7 +76,8 @@ export function Palette() {
   };
 
   return (
-    <aside className="glass flex w-52 shrink-0 flex-col">
+    <aside className="glass flex w-60 shrink-0 flex-col overflow-y-auto">
+      <MaterialPicker />
       <div className="border-b border-white/[0.05] px-3 py-2.5">
         <p className="tag text-plant-400">Equipment</p>
         <p className="mt-0.5 text-[10px] text-plant-500">Drag onto the flowsheet</p>
