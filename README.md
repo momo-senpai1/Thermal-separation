@@ -20,7 +20,7 @@ npm run dev       # dev server with hot reload → http://localhost:5173
 | Command | What it does |
 |---|---|
 | `npm run dev` | Development server with hot reload |
-| `npm test` | Unit + integration tests (vitest, 109 tests) |
+| `npm test` | Unit + integration tests (vitest, 165 tests) |
 | `npm run typecheck` | Strict TypeScript check |
 | `npm run build` | Type-check + production bundle in `dist/` |
 | `npm run preview` | Serve the production build → http://localhost:4173 |
@@ -60,8 +60,44 @@ The header switches between modules (hash routes, so links work on static hostin
 | `#/mccabe-thiele` | McCabe–Thiele design workbench |
 | `#/batch` | Batch distillation workbench |
 | `#/distillation-lines` | Ternary distillation lines, border lines and product regions |
+| `#/extraction?tool=cross\|counter\|hn` | Cross-current, counter-current and Hunter–Nash extraction |
+| `#/absorption` | Gas absorption and stripping (Henry's law, Kremser, NTU/HTU) |
+| `#/evaporation` | Single/multiple-effect evaporation, steam economy, MVR |
+| `#/crystallization` | Solubility, cooling/evaporative yield, MSMPR crystal size distribution |
+| `#/drying` | Psychrometrics, drying curves and time, continuous dryer air/heat |
+| `#/equipment` | Equipment library — 32 items across all topics, linked to the calculators |
 
-Planned: extraction, absorption, crystallization.
+Planned: reactive extraction, adsorption.
+
+### Feed materials (flowsheet)
+
+The flowsheet's **Feed materials** picker selects the two components (water,
+methanol, ethanol, acetone, benzene, toluene, p-xylene, n-hexane, n-heptane,
+cyclohexane). `engine/propertyPackage.ts` decides the model per pair:
+Raoult for similar hydrocarbons and methanol/ethanol; **Wilson** for
+ethanol/water and methanol/water (fitted to Perry's VLE — within 0.02 in y,
+ethanol azeotrope at 78.2 °C) and for acetone/methanol and benzene/cyclohexane
+(fitted to their azeotropes). Pairs that form two liquid phases (water +
+hydrocarbons) or lack validated parameters are refused with the reason. With
+an activity model the column and batch still step on the real equilibrium
+curve (tangent-pinch R_min, total-reflux N_min, azeotrope limit). A **flash
+drum** unit (heat duty + drum pressure) is available in the palette.
+
+### Unit operations
+
+- **Absorption / stripping** (`engine/absorption.ts`): Henry constants for NH₃,
+  acetone, SO₂, H₂S, CO₂ (absorption) and benzene, toluene, O₂ (stripping) with
+  temperature dependence; loading-ratio equilibrium, minimum L/G or G/L, stage
+  stepping vs Kremser, packed height from NTU × HTU.
+- **Evaporation** (`engine/evaporation.ts`): forward-feed multiple effects
+  designed for equal areas, boiling-point elevation, steam economy vs number of
+  effects, MVR compressor power and COP.
+- **Crystallization** (`engine/crystallization.ts`): CRC solubility tables,
+  yield and duties for cooling and evaporative crystallization, MSMPR
+  distribution (dominant size 3Gτ, cumulative undersize).
+- **Drying** (`engine/drying.ts`): humidity, enthalpy, wet bulb, dew point;
+  constant- and falling-rate drying time; adiabatic continuous dryer with the
+  air path on a psychrometric chart.
 
 ### McCabe–Thiele workbench (`engine/mtDesign.ts`)
 
@@ -111,6 +147,29 @@ point a stage):
   and D/F are reported. *Snap D onto the line* iterates to a consistent split.
 - Pressure slider moves the azeotropes (ternary saddle 51.5 °C at ≈ 0.81 bar).
 
+### Extraction (`engine/extraction/`)
+
+Three tools on one shared specification (X₀, Y₀, X_N, Ġ/L̇ per system), so they
+compare number for number:
+
+- **Cross-current** (loading diagram): one operating line per stage from the
+  solvent line, whole stages, extraction factor per stage, pooled extract,
+  X*(Y₀) limit; targets: stages, raffinate for given N, solvent ratio for given N.
+- **Counter-current:** one operating line stepped off from the feed end,
+  fractional stages, minimum solvent ratio (tangent pinch) and the one-stage
+  ratio; same three targets; side-by-side solvent comparison with cross-current.
+- **Hunter–Nash** (ternary, partly miscible): mixing point, E₁ by the lever
+  rule, pole Δ = F − E₁ = R_N − S, stages from the feed end, S/F_min (tie-line
+  pinch) and S/F_max (M reaches the binodal).
+
+LLE systems (`lle.ts`): Water / Acetic acid / Isopropyl ether and Water /
+Nicotine / Kerosene from Treybal's tables; Water with acetone or ethanol and
+toluene, benzene or MIBK predicted with UNIFAC (`unifac.ts`, Hansen et al. 1991)
+and an LLE flash continued to the plait point. The UNIFAC implementation is
+checked against literature γ∞ (benzene and toluene in water, water in the
+aromatics) and mutual solubilities; tie lines are verified isoactive. UNIFAC
+systems are labelled as predictions in the UI.
+
 ## Data contract
 
 Defined in `src/types/process.ts`. Internal units: kmol/h, **K**, kPa, kW
@@ -121,7 +180,7 @@ Defined in `src/types/process.ts`. Internal units: kmol/h, **K**, kPa, kW
 { id, source, target, flowRate, temperature, pressure, vaporFraction /* q */, molarFractions: { compA, compB } }
 
 // Unit operation (node)
-{ id, type: 'feed' | 'mixer' | 'heater' | 'distillation' | 'batch',
+{ id, type: 'feed' | 'mixer' | 'heater' | 'distillation' | 'batch' | 'flash',
   params: { theoreticalStages, refluxRatio, heatDuty, condenserType?, distillateToFeed?, feedSpec?, batchMode?, distilledFraction? },
   state:  { topProduct, bottomProduct } }
 ```

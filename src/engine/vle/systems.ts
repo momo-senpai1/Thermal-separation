@@ -12,6 +12,7 @@
  * so every kind is handled the same way downstream.
  */
 
+import { METHANOL_WATER } from '../data/methanolWater';
 import { brent, linspace } from '../numerics';
 import { COMPONENTS } from '../components';
 import { saturationTemperature, vaporPressure } from '../thermodynamics';
@@ -163,13 +164,7 @@ function vanLaarWaterSystem(id: string, light: Exclude<Polar, 'water'>, name: st
   };
 }
 
-/** Methanol / water at 1 atm — Perry's Chemical Engineers' Handbook (x, y, T/°C). */
-const METHANOL_WATER: [number, number, number][] = [
-  [0, 0, 100], [0.02, 0.134, 96.4], [0.04, 0.23, 93.5], [0.06, 0.304, 91.2], [0.08, 0.365, 89.3],
-  [0.1, 0.418, 87.7], [0.15, 0.517, 84.4], [0.2, 0.579, 81.7], [0.3, 0.665, 78.0], [0.4, 0.729, 75.3],
-  [0.5, 0.779, 73.1], [0.6, 0.825, 71.2], [0.7, 0.87, 69.3], [0.8, 0.915, 67.6], [0.9, 0.958, 66.0],
-  [0.95, 0.979, 65.0], [1, 1, 64.5],
-];
+
 
 function datasheetSystem(): VleSystem {
   const xs = METHANOL_WATER.map((r) => r[0]);

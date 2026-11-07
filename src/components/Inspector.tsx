@@ -1,5 +1,6 @@
 import { ParamSlider } from '@/components/ParamSlider';
 import { Segmented } from '@/components/ui/segmented';
+import { COMPONENTS } from '@/engine/components';
 import { navigate } from '@/lib/route';
 import { cn, cToK, fmt, kToC } from '@/lib/utils';
 import { DEFAULT_FEED, useFlowsheet, type StreamEdge, type UnitNode } from '@/store/flowsheetStore';
@@ -74,6 +75,7 @@ function streamRows(s: StreamConditions): [string, string, string?][] {
 function NodePanel({ node }: { node: UnitNode }) {
   const updateParams = useFlowsheet((s) => s.updateNodeParams);
   const updateFeed = useFlowsheet((s) => s.updateFeed);
+  const system = useFlowsheet((s) => s.system);
   const { params, state } = node.data;
 
   switch (node.type) {
@@ -86,7 +88,7 @@ function NodePanel({ node }: { node: UnitNode }) {
             value={f.flowRate} onChange={(v) => updateFeed(node.id, { flowRate: v })} />
           <ParamSlider label="Pressure" symbol="P" unit="kPa" min={10} max={500} step={0.5}
             value={f.pressure} onChange={(v) => updateFeed(node.id, { pressure: v })} />
-          <ParamSlider label="Light key (A)" symbol="xA" min={0.01} max={0.99} step={0.005} digits={3}
+          <ParamSlider label={`Light key · ${COMPONENTS[system.A].name}`} symbol="xA" min={0.01} max={0.99} step={0.005} digits={3}
             value={f.molarFractions.compA}
             onChange={(v) => updateFeed(node.id, { molarFractions: { compA: v, compB: 1 - v } })} />
           <div className="space-y-1.5">
@@ -190,7 +192,7 @@ function NodePanel({ node }: { node: UnitNode }) {
                   ['Feed stage', String(c.feedStage), `of ${params.theoreticalStages}`],
                   ['Rmin', fmt(c.Rmin, 3)],
                   ['R / Rmin', fmt(params.refluxRatio / c.Rmin, 2)],
-                  ['Nmin (Fenske)', fmt(c.Nmin, 2), 'stg'],
+                  [c.curve ? 'Nmin (total reflux)' : 'Nmin (Fenske)', fmt(c.Nmin, 2), 'stg'],
                   ['Qc', fmt(c.Qc, 1), 'kW'],
                   ['Qr', fmt(c.Qr, 1), 'kW'],
                 ]}
@@ -200,6 +202,30 @@ function NodePanel({ node }: { node: UnitNode }) {
         </>
       );
     }
+    case 'flash':
+      return (
+        <>
+          <Section title="Flash drum">
+            <ParamSlider label="Heat duty" symbol="Q" unit="kW" min={-2000} max={4000} step={5} digits={0}
+              value={params.heatDuty} onChange={(v) => updateParams(node.id, { heatDuty: v })} />
+            <ParamSlider label="Drum pressure" symbol="P" unit="kPa" min={10} max={500} step={0.5} digits={1}
+              value={params.flashPressure ?? 101.325} onChange={(v) => updateParams(node.id, { flashPressure: v })} />
+            <p className="text-[10px] leading-relaxed text-plant-500">
+              Heat by Q, let down to P (PH flash), separate. A mesh demister keeps entrained droplets out of the vapour.
+            </p>
+          </Section>
+          {state.topProduct && state.bottomProduct && (
+            <>
+              <Section title="Vapour (top)">
+                <KV rows={streamRows(state.topProduct)} />
+              </Section>
+              <Section title="Liquid (bottom)">
+                <KV rows={streamRows(state.bottomProduct)} />
+              </Section>
+            </>
+          )}
+        </>
+      );
     case 'batch': {
       const b = node.data.batch;
       const mode = params.batchMode ?? 'constant-reflux';

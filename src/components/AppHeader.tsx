@@ -1,22 +1,71 @@
 import { RotateCcw } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { navigate, type Route } from '@/lib/route';
+import { COMPONENTS } from '@/engine/components';
 import { useFlowsheet } from '@/store/flowsheetStore';
 
-const NAV: { route?: Route; label: string; group: string }[] = [
-  { route: 'flowsheet', label: 'Flowsheet', group: 'Plant' },
-  { route: 'mccabe-thiele', label: 'McCabe–Thiele', group: 'Distillation' },
-  { route: 'batch', label: 'Batch distillation', group: 'Distillation' },
-  { route: 'distillation-lines', label: 'Distillation lines', group: 'Distillation' },
-  { label: 'Extraction', group: 'Extraction' },
-  { label: 'Absorption', group: 'Absorption' },
-  { label: 'Crystallization', group: 'Crystallization' },
+type NavItem = { route: Route; label: string };
+type NavGroup = { label: string; items: NavItem[] };
+const NAV: (NavItem | NavGroup)[] = [
+  { route: 'flowsheet', label: 'Flowsheet' },
+  {
+    label: 'Distillation',
+    items: [
+      { route: 'mccabe-thiele', label: 'McCabe–Thiele' },
+      { route: 'batch', label: 'Batch distillation' },
+      { route: 'distillation-lines', label: 'Distillation lines' },
+    ],
+  },
+  { route: 'extraction', label: 'Extraction' },
+  { route: 'absorption', label: 'Absorption' },
+  { route: 'evaporation', label: 'Evaporation' },
+  { route: 'crystallization', label: 'Crystallization' },
+  { route: 'drying', label: 'Drying' },
+  { route: 'equipment', label: 'Equipment' },
 ];
+
+const tab = (active: boolean) =>
+  cn(
+    'whitespace-nowrap rounded px-2.5 py-1 text-[11px] transition-colors',
+    active
+      ? 'bg-signal-liquid/15 text-signal-liquid shadow-[inset_0_0_0_1px_rgba(45,212,191,0.35)]'
+      : 'text-plant-300 hover:bg-white/[0.04] hover:text-plant-100',
+  );
+
+function Group({ g, route }: { g: NavGroup; route: Route }) {
+  const [open, setOpen] = useState(false);
+  const active = g.items.find((i) => i.route === route);
+  return (
+    <div className="relative" onMouseLeave={() => setOpen(false)}>
+      <button type="button" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)} className={tab(!!active)}>
+        {active ? `${g.label} · ${active.label}` : g.label} ▾
+      </button>
+      {open && (
+        <div role="menu" className="glass absolute left-0 top-full z-50 mt-1 min-w-[190px] !bg-plant-900/95 p-1">
+          {g.items.map((i) => (
+            <button
+              key={i.route}
+              role="menuitem"
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                navigate(i.route);
+              }}
+              className={cn('block w-full rounded px-2.5 py-1.5 text-left text-[11px]', i.route === route ? 'text-signal-liquid' : 'text-plant-200 hover:bg-white/[0.05]')}
+            >
+              {i.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function AppHeader({ route }: { route: Route }) {
   return (
-    <header className="glass flex h-11 shrink-0 items-center gap-5 px-4">
+    <header className="glass relative z-30 flex h-11 shrink-0 items-center gap-5 px-4">
       <div className="flex items-center gap-2.5">
         <svg viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-signal-liquid stroke-[1.5]" aria-hidden>
           <rect x="8" y="2" width="8" height="20" rx="4" />
@@ -25,32 +74,14 @@ export function AppHeader({ route }: { route: Route }) {
         <span className="text-sm font-semibold tracking-tight text-plant-100">Thermal Separation</span>
       </div>
 
-      <nav aria-label="Modules" className="flex min-w-0 items-center gap-0.5 overflow-x-auto">
+      <nav aria-label="Modules" className="flex min-w-0 items-center gap-0.5">
         {NAV.map((n) =>
-          n.route ? (
-            <button
-              key={n.label}
-              type="button"
-              onClick={() => navigate(n.route!)}
-              aria-current={route === n.route ? 'page' : undefined}
-              className={cn(
-                'whitespace-nowrap rounded px-2.5 py-1 text-[11px] transition-colors',
-                route === n.route
-                  ? 'bg-signal-liquid/15 text-signal-liquid shadow-[inset_0_0_0_1px_rgba(45,212,191,0.35)]'
-                  : 'text-plant-300 hover:bg-white/[0.04] hover:text-plant-100',
-              )}
-            >
+          'items' in n ? (
+            <Group key={n.label} g={n} route={route} />
+          ) : (
+            <button key={n.route} type="button" onClick={() => navigate(n.route)} aria-current={route === n.route ? 'page' : undefined} className={tab(route === n.route)}>
               {n.label}
             </button>
-          ) : (
-            <span
-              key={n.label}
-              title="Planned module"
-              className="flex cursor-default items-center gap-1 whitespace-nowrap px-2 py-1 text-[11px] text-plant-500"
-            >
-              {n.label}
-              <span className="rounded-sm border border-white/10 px-1 font-mono text-[8px] uppercase tracking-wider">soon</span>
-            </span>
           ),
         )}
       </nav>
@@ -65,6 +96,7 @@ function FlowsheetStatus() {
   const streams = useFlowsheet((s) => s.edges.length);
   const resolved = useFlowsheet((s) => s.edges.filter((e) => e.data?.resolved).length);
   const resetDemo = useFlowsheet((s) => s.resetDemo);
+  const system = useFlowsheet((s) => s.system);
   const ms = useFlowsheet((s) => s.lastSolveMs);
   const errors = useFlowsheet((s) => s.nodes.filter((n) => n.data.diag?.status === 'error').length);
   const warnings = useFlowsheet((s) => s.nodes.filter((n) => n.data.diag?.status === 'warning').length);
@@ -72,7 +104,7 @@ function FlowsheetStatus() {
     <>
       <span className="hidden font-mono text-[10px] text-plant-400 xl:inline">
         <Stat label="UNITS" value={nodes} /> · <Stat label="STREAMS" value={`${resolved}/${streams}`} /> ·{' '}
-        <Stat label="SYSTEM" value="Benzene / Toluene" />
+        <Stat label="SYSTEM" value={`${COMPONENTS[system.A].name} / ${COMPONENTS[system.B].name}`} />
       </span>
       {(errors > 0 || warnings > 0) && (
         <span className="font-mono text-[10px]">

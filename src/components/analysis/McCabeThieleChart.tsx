@@ -127,9 +127,9 @@ export function McCabeThieleChart({ s }: { s: McCabeThieleSeries }) {
 }
 
 /** Legend row — identity never by colour alone (line style is shown too). */
-export function McCabeThieleLegend() {
+export function McCabeThieleLegend({ real = false }: { real?: boolean }) {
   const items: { label: string; color: string; dash?: string; width?: number }[] = [
-    { label: 'Equilibrium (constant α)', color: VIZ.equilibrium },
+    { label: real ? 'Equilibrium (activity model)' : 'Equilibrium (constant α)', color: VIZ.equilibrium },
     { label: 'Rectifying', color: VIZ.operating },
     { label: 'Stripping', color: VIZ.operating, dash: STRIPPING_DASH },
     { label: 'q-line', color: VIZ.qLine },

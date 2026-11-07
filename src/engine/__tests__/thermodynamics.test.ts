@@ -202,3 +202,38 @@ describe('validity warnings', () => {
     expect(validityWarnings(BT, 600).some((w) => w.includes('above Tc'))).toBe(true);
   });
 });
+
+describe('activity-model packages', () => {
+  it("ethanol / water (Wilson, Perry's data): within 0.02 of every tabulated point; azeotrope ≈ 0.90 at 78.2 °C", async () => {
+    const { binaryPackage } = await import('../propertyPackage');
+    const { ETHANOL_WATER } = await import('../data/ethanolWater');
+    const { binaryEquilibrium } = await import('../thermodynamics');
+    const ew = binaryPackage({ A: 'ethanol', B: 'water' });
+    for (const [x, y] of ETHANOL_WATER) expect(Math.abs(bubbleTemperature(ew, [x, 1 - x], ATM).y[0]! - y)).toBeLessThan(0.02);
+    const eq = binaryEquilibrium(ew, ATM);
+    expect(eq.xMax).toBeGreaterThan(0.88);
+    expect(eq.xMax).toBeLessThan(0.92);
+    expect(bubbleTemperature(ew, [eq.xMax, 1 - eq.xMax], ATM).T - 273.15).toBeCloseTo(78.15, 0);
+  });
+  it("methanol / water (Wilson, Perry's): RMS Δy < 0.01, temperatures within 0.5 °C", async () => {
+    const { binaryPackage } = await import('../propertyPackage');
+    const { METHANOL_WATER } = await import('../data/methanolWater');
+    const mw = binaryPackage({ A: 'methanol', B: 'water' });
+    let ss = 0;
+    for (const [x, y, T] of METHANOL_WATER.slice(1, -1)) {
+      const b = bubbleTemperature(mw, [x, 1 - x], ATM);
+      ss += (b.y[0]! - y) ** 2;
+      expect(Math.abs(b.T - 273.15 - T)).toBeLessThan(0.5);
+    }
+    expect(Math.sqrt(ss / 15)).toBeLessThan(0.01);
+  });
+  it('non-ideal flash closes the balance and dew inverts bubble', async () => {
+    const { binaryPackage } = await import('../propertyPackage');
+    const ew = binaryPackage({ A: 'ethanol', B: 'water' });
+    const f = flashTP(ew, [0.3, 0.7], 273.15 + 84, ATM);
+    expect(f.phase).toBe('two-phase');
+    expect((1 - f.beta) * f.x[0]! + f.beta * f.y[0]!).toBeCloseTo(0.3, 9);
+    const d = dewTemperature(ew, [0.5, 0.5], ATM);
+    expect(bubbleTemperature(ew, d.x, ATM).T).toBeCloseTo(d.T, 6);
+  });
+});

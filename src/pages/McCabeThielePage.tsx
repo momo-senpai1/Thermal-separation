@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { EquipmentPanel } from '@/components/equipment/EquipmentCards';
 import { ParamSlider } from '@/components/ParamSlider';
 import { Segmented } from '@/components/ui/segmented';
 import { DesignDiagram, DesignLegend, FULL, type Window } from '@/components/workbench/DesignDiagram';
@@ -278,6 +279,9 @@ export default function McCabeThielePage({ params }: { params: URLSearchParams }
             <li>Datasheets are joined by straight lines between the tabulated points.</li>
           </ul>
         </Panel>
+      </div>
+      <div className="pt-2">
+        <EquipmentPanel topic="distillation" />
       </div>
     </div>
   );

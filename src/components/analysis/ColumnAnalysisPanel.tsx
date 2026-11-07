@@ -18,7 +18,7 @@ import {
 } from '@tremor/react';
 import { AlertTriangle, CheckCircle2, Gauge, X } from 'lucide-react';
 import { useMemo } from 'react';
-import { COMPONENTS, DEFAULT_SYSTEM } from '@/engine/components';
+import { COMPONENTS } from '@/engine/components';
 import { fmt, kToC } from '@/lib/utils';
 import { useFlowsheet, type UnitNode } from '@/store/flowsheetStore';
 import { buildMcCabeThiele, buildStageTable, buildTxy } from './chartData';
@@ -53,10 +53,11 @@ export default function ColumnAnalysisPanel({ node, onClose }: { node: UnitNode;
   const P = D?.pressure ?? 101.325;
 
   const mt = useMemo(() => (c ? buildMcCabeThiele(c) : null), [c]);
-  const txy = useMemo(() => buildTxy(DEFAULT_SYSTEM, P), [P]);
-  const stages = useMemo(() => (c ? buildStageTable(c, DEFAULT_SYSTEM, P) : []), [c, P]);
+  const system = useFlowsheet((st) => st.system);
+  const txy = useMemo(() => buildTxy(system, P), [system, P]);
+  const stages = useMemo(() => (c ? buildStageTable(c, system, P) : []), [c, system, P]);
 
-  const sys = `${COMPONENTS[DEFAULT_SYSTEM.A].name} / ${COMPONENTS[DEFAULT_SYSTEM.B].name}`;
+  const sys = `${COMPONENTS[system.A].name} / ${COMPONENTS[system.B].name}`;
   const { refluxRatio: R, theoreticalStages: N, condenserType = 'total' } = node.data.params;
 
   return (
@@ -90,13 +91,13 @@ export default function ColumnAnalysisPanel({ node, onClose }: { node: UnitNode;
       ) : (
         <div className="flex-1 space-y-3 overflow-y-auto p-3">
           <div className="grid grid-cols-2 gap-2">
-            <Kpi title={`Distillate purity · ${COMPONENTS[DEFAULT_SYSTEM.A].name}`} value={fmt(c.xD * 100, 2)} unit="mol %">
+            <Kpi title={`Distillate purity · ${COMPONENTS[system.A].name}`} value={fmt(c.xD * 100, 2)} unit="mol %">
               <ProgressBar value={c.xD * 100} color="teal" className="mt-1" showAnimation={false} />
               <Text className="readout mt-1 !text-[10px] !text-plant-400">
                 D = {fmt(c.D, 1)} kmol/h · {fmt(kToC(D.temperature), 1)} °C
               </Text>
             </Kpi>
-            <Kpi title={`Bottoms purity · ${COMPONENTS[DEFAULT_SYSTEM.B].name}`} value={fmt((1 - c.xB) * 100, 2)} unit="mol %">
+            <Kpi title={`Bottoms purity · ${COMPONENTS[system.B].name}`} value={fmt((1 - c.xB) * 100, 2)} unit="mol %">
               <ProgressBar value={(1 - c.xB) * 100} color="teal" className="mt-1" showAnimation={false} />
               <Text className="readout mt-1 !text-[10px] !text-plant-400">
                 B = {fmt(c.B, 1)} kmol/h · {fmt(kToC(B.temperature), 1)} °C · x<sub>B</sub> = {fmt(c.xB, 4)}
@@ -131,12 +132,12 @@ export default function ColumnAnalysisPanel({ node, onClose }: { node: UnitNode;
             </TabList>
             <TabPanels>
               <TabPanel className="!mt-3 space-y-2">
-                <McCabeThieleLegend />
+                <McCabeThieleLegend real={!!c.curve} />
                 <McCabeThieleChart s={mt} />
                 <p className="text-[10px] leading-relaxed text-plant-500">
                   Steps drawn from x<sub>D</sub> down to x<sub>B</sub>; hover a stage corner for its compositions.
                   {condenserType === 'partial' && ' The first step is the partial condenser (an equilibrium stage).'}{' '}
-                  CMO and constant α assumed.
+                  {c.curve ? 'CMO assumed; stages stepped on the real equilibrium curve.' : 'CMO and constant α assumed.'}
                 </p>
               </TabPanel>
               <TabPanel className="!mt-3 space-y-2">

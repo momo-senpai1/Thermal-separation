@@ -14,7 +14,7 @@ import { useFlowsheet } from '@/store/flowsheetStore';
 import type { UnitType } from '@/types/process';
 import { DND_MIME } from './Palette';
 
-const UNIT_TYPES: readonly string[] = ['feed', 'mixer', 'heater', 'distillation', 'batch'];
+const UNIT_TYPES: readonly string[] = ['feed', 'mixer', 'heater', 'distillation', 'batch', 'flash'];
 
 const MINIMAP_COLOR: Record<string, string> = {
   feed: '#2dd4bf',
@@ -22,6 +22,7 @@ const MINIMAP_COLOR: Record<string, string> = {
   heater: '#f97316',
   distillation: '#2dd4bf',
   batch: '#fbbf24',
+  flash: '#fbbf24',
 };
 
 export function FlowCanvas() {
