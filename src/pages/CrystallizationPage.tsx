@@ -128,7 +128,7 @@ export default function CrystallizationPage() {
                   <ReferenceDot x={csd.LD * 1e6} y={(csd.mass(csd.LD) * csd.Gt) / MT} r={4} fill={VIZ.text} stroke={VIZ.surface} strokeWidth={2}>
                     <Label value="L_D" position="top" offset={8} style={mono} />
                   </ReferenceDot>
-                  <Tooltip contentStyle={{ background: '#06090d', border: '1px solid rgba(255,255,255,0.1)', fontSize: 10 }} formatter={(v: number) => fmt(v, 3)} labelFormatter={(l: number) => `L = ${fmt(l, 0)} µm`} />
+                  <Tooltip contentStyle={{ background: 'rgb(var(--plant-950))', border: '1px solid rgb(var(--white)/0.1)', fontSize: 10 }} formatter={(v: number) => fmt(v, 3)} labelFormatter={(l: number) => `L = ${fmt(l, 0)} µm`} />
                 </ComposedChart>
               </ResponsiveContainer>
               <p className="mb-1 mt-2 text-[10px] text-plant-300">Cumulative mass undersize</p>

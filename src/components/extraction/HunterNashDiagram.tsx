@@ -98,7 +98,7 @@ export function HunterNashDiagram({ sys, r, layers }: { sys: LLESystem; r: HNRes
       <text x={0} y={BL.y + 34} textAnchor="middle" fill={VIZ.textMuted} fontSize={10} fontFamily="Inter, sans-serif">← solvent mass fraction →  ·  left edge: solute mass fraction</text>
 
       {/* binodal and tie lines */}
-      <path d={d(bin)} stroke={VIZ.equilibrium} strokeWidth={2} fill="rgba(57,135,229,0.06)" />
+      <path d={d(bin)} stroke={VIZ.equilibrium} strokeWidth={2} fill="rgb(var(--viz-eq-rgb)/0.06)" />
       {!sys.plait && ties.length > 0 && <path d={d([ties.at(-1)!.R, ties.at(-1)!.E])} stroke={VIZ.equilibrium} strokeWidth={1.2} strokeDasharray="3 3" />}
       {layers.tieLines &&
         ties.filter((_, i) => i % Math.max(1, Math.round(ties.length / 12)) === 0).map((t, i) => (

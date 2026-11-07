@@ -38,6 +38,16 @@ const TAG_SERIES: Record<UnitType, { prefix: string; base: number; label: string
   distillation: { prefix: 'T', base: 400, label: 'Distillation Column' },
   batch: { prefix: 'B', base: 500, label: 'Batch Still' },
   flash: { prefix: 'V', base: 600, label: 'Flash Drum' },
+  splitter: { prefix: 'S', base: 200, label: 'Splitter' },
+  cooler: { prefix: 'E', base: 350, label: 'Cooler' },
+  pump: { prefix: 'P', base: 700, label: 'Pump' },
+  valve: { prefix: 'FV', base: 700, label: 'Valve' },
+  evaporator: { prefix: 'EV', base: 800, label: 'Evaporator' },
+  absorber: { prefix: 'C', base: 900, label: 'Absorber' },
+  extractor: { prefix: 'X', base: 900, label: 'Extractor' },
+  evaptrain: { prefix: 'EV', base: 850, label: 'Multiple-effect evaporator' },
+  crystallizer: { prefix: 'CR', base: 900, label: 'Crystallizer' },
+  dryer: { prefix: 'D', base: 900, label: 'Dryer' },
 };
 
 const DEFAULT_PARAMS: Record<UnitType, UnitParams> = {
@@ -50,8 +60,21 @@ const DEFAULT_PARAMS: Record<UnitType, UnitParams> = {
     heatDuty: 0,
     condenserType: 'total',
     distillateToFeed: 0.42,
+    internals: 'trays',
+    trayEfficiency: 0.7,
+    hetp: 0.5,
   },
   flash: { theoreticalStages: 0, refluxRatio: 0, heatDuty: 400, flashPressure: 101.325 },
+  splitter: { theoreticalStages: 0, refluxRatio: 0, heatDuty: 0, splitFraction: 0.5 },
+  cooler: { theoreticalStages: 0, refluxRatio: 0, heatDuty: -300 },
+  pump: { theoreticalStages: 0, refluxRatio: 0, heatDuty: 0, outletPressure: 400, efficiency: 0.7 },
+  valve: { theoreticalStages: 0, refluxRatio: 0, heatDuty: 0, outletPressure: 50 },
+  evaporator: { theoreticalStages: 0, refluxRatio: 0, heatDuty: 0, flashPressure: 101.325, targetVF: 0.4 },
+  absorber: { theoreticalStages: 0, refluxRatio: 0, heatDuty: 0, block: {} },
+  extractor: { theoreticalStages: 0, refluxRatio: 0, heatDuty: 0, block: {} },
+  evaptrain: { theoreticalStages: 0, refluxRatio: 0, heatDuty: 0, block: {} },
+  crystallizer: { theoreticalStages: 0, refluxRatio: 0, heatDuty: 0, block: {} },
+  dryer: { theoreticalStages: 0, refluxRatio: 0, heatDuty: 0, block: {} },
   batch: {
     theoreticalStages: 5,
     refluxRatio: 3,
@@ -104,7 +127,7 @@ function makeUnit(type: UnitType, position: XYPosition, nodes: UnitNode[]): Unit
     data: {
       tag: nextTag(type, nodes),
       label: TAG_SERIES[type].label,
-      params: { ...DEFAULT_PARAMS[type] },
+      params: { ...DEFAULT_PARAMS[type], ...(DEFAULT_PARAMS[type].block ? { block: { ...DEFAULT_PARAMS[type].block } } : {}) },
       state: {
         topProduct: type === 'feed' ? structuredClone(DEFAULT_FEED) : null,
         bottomProduct: null,
@@ -128,7 +151,7 @@ function solve(nodes: UnitNode[], edges: StreamEdge[]) {
     if (!u) return n;
     // a feed keeps its user specification even if evaluation failed
     const state = n.type === 'feed' && !u.state.topProduct ? n.data.state : u.state;
-    return { ...n, data: { ...n.data, state, diag: u.diag, column: u.column, batch: u.batch } };
+    return { ...n, data: { ...n.data, state, diag: u.diag, column: u.column, batch: u.batch, block: u.block, extra: u.extra } };
   });
   const solvedEdges = edges.map((e) => {
     const cond = sol.streams.get(e.id) ?? null;
@@ -167,6 +190,8 @@ export interface FlowsheetState {
   addUnit: (type: UnitType, position: XYPosition) => void;
   updateNodeParams: (id: string, params: Partial<UnitParams>) => void;
   updateFeed: (id: string, patch: Partial<StreamConditions>) => void;
+  /** set one field of a process block's own specification */
+  updateBlock: (id: string, key: string, value: number | string) => void;
   resetDemo: () => void;
 
   /** Strict-schema serialisers */
@@ -281,6 +306,9 @@ export const useFlowsheet = create<FlowsheetState>()((set, get) => {
     updateNodeParams: (id, params) =>
       patchNode(id, (d) => ({ ...d, params: { ...d.params, ...params } })),
 
+    updateBlock: (id, key, value) =>
+      patchNode(id, (d) => ({ ...d, params: { ...d.params, block: { ...(d.params.block ?? {}), [key]: value } } })),
+
     updateFeed: (id, patch) =>
       patchNode(id, (d) => {
         const cur = d.state.topProduct ?? DEFAULT_FEED;
@@ -308,6 +336,7 @@ export const useFlowsheet = create<FlowsheetState>()((set, get) => {
       const comps = binaryPackage(currentSystem);
       const nodes = get().nodes.map((n) => {
         if (n.type !== 'feed' || !n.data.state.topProduct) return n;
+
         const f = n.data.state.topProduct;
         const T = bubbleTemperature(comps, [f.molarFractions.compA, f.molarFractions.compB], f.pressure).T;
         return { ...n, data: { ...n.data, state: { ...n.data.state, topProduct: { ...f, temperature: T, vaporFraction: 1 } } } };

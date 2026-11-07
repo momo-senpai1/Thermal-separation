@@ -17,19 +17,19 @@ function ColumnSymbol({ stages, partial }: { stages: number; partial: boolean })
     <svg viewBox="0 0 96 250" className="h-[250px] w-[96px] shrink-0" aria-hidden>
       <defs>
         <linearGradient id="shell" x1="0" x2="1">
-          <stop offset="0" stopColor="#2dd4bf" stopOpacity="0.02" />
-          <stop offset="0.5" stopColor="#2dd4bf" stopOpacity="0.09" />
-          <stop offset="1" stopColor="#2dd4bf" stopOpacity="0.02" />
+          <stop offset="0" stopColor="rgb(var(--sig-liquid))" stopOpacity="0.02" />
+          <stop offset="0.5" stopColor="rgb(var(--sig-liquid))" stopOpacity="0.09" />
+          <stop offset="1" stopColor="rgb(var(--sig-liquid))" stopOpacity="0.02" />
         </linearGradient>
       </defs>
 
       {/* vessel */}
-      <rect x="18" y="26" width="34" height="198" rx="17" fill="url(#shell)" stroke="#2dd4bf" strokeWidth="1.5" />
+      <rect x="18" y="26" width="34" height="198" rx="17" fill="url(#shell)" stroke="rgb(var(--sig-liquid))" strokeWidth="1.5" />
       {trays.map((y, i) => (
         <path
           key={y}
           d={i % 2 === 0 ? `M18 ${y}h26v-4` : `M52 ${y}h-26v-4`}
-          stroke="#2dd4bf"
+          stroke="rgb(var(--sig-liquid))"
           strokeOpacity="0.55"
           strokeWidth="1"
           fill="none"
@@ -42,22 +42,22 @@ function ColumnSymbol({ stages, partial }: { stages: number; partial: boolean })
       )}
 
       {/* overhead vapour → condenser */}
-      <path d="M35 26V10h37v8" stroke="#fbbf24" strokeWidth="1.3" fill="none" />
-      <circle cx="72" cy="26" r="8" fill="rgba(251,191,36,0.08)" stroke="#fbbf24" strokeWidth="1.3" />
-      <path d="M66 22l4 4-4 4m6-8 4 4-4 4" stroke="#fbbf24" strokeWidth="1" fill="none" />
+      <path d="M35 26V10h37v8" stroke="rgb(var(--sig-vapor))" strokeWidth="1.3" fill="none" />
+      <circle cx="72" cy="26" r="8" fill="rgb(var(--sig-vapor)/0.08)" stroke="rgb(var(--sig-vapor))" strokeWidth="1.3" />
+      <path d="M66 22l4 4-4 4m6-8 4 4-4 4" stroke="rgb(var(--sig-vapor))" strokeWidth="1" fill="none" />
       {/* reflux return */}
-      <path d="M72 34v12H52" stroke="#2dd4bf" strokeWidth="1.1" strokeDasharray="3 2" fill="none" />
+      <path d="M72 34v12H52" stroke="rgb(var(--sig-liquid))" strokeWidth="1.1" strokeDasharray="3 2" fill="none" />
       {/* distillate draw (liquid for total, vapour for partial) */}
-      <path d="M80 26h16" stroke={partial ? '#fbbf24' : '#2dd4bf'} strokeWidth="1.3" />
+      <path d="M80 26h16" stroke={partial ? 'rgb(var(--sig-vapor))' : 'rgb(var(--sig-liquid))'} strokeWidth="1.3" />
 
       {/* reboiler */}
-      <path d="M35 224v10h28" stroke="#2dd4bf" strokeWidth="1.3" fill="none" />
-      <rect x="58" y="226" width="22" height="14" rx="7" fill="rgba(249,115,22,0.08)" stroke="#f97316" strokeWidth="1.3" />
-      <path d="M69 226v-24H52" stroke="#fbbf24" strokeWidth="1.1" strokeDasharray="3 2" fill="none" />
-      <path d="M80 233h16" stroke="#2dd4bf" strokeWidth="1.3" />
+      <path d="M35 224v10h28" stroke="rgb(var(--sig-liquid))" strokeWidth="1.3" fill="none" />
+      <rect x="58" y="226" width="22" height="14" rx="7" fill="rgb(var(--sig-heat)/0.08)" stroke="rgb(var(--sig-heat))" strokeWidth="1.3" />
+      <path d="M69 226v-24H52" stroke="rgb(var(--sig-vapor))" strokeWidth="1.1" strokeDasharray="3 2" fill="none" />
+      <path d="M80 233h16" stroke="rgb(var(--sig-liquid))" strokeWidth="1.3" />
 
       {/* feed nozzle */}
-      <path d="M0 125h18" stroke="#5c7089" strokeWidth="1.3" />
+      <path d="M0 125h18" stroke="rgb(var(--plant-400))" strokeWidth="1.3" />
     </svg>
   );
 }
@@ -79,9 +79,12 @@ export function DistillationNode({ data, selected }: NodeProps<UnitNode>) {
             <Readout label="R" value={fmt(refluxRatio, 2)} tone="liquid" />
             <Readout label="D/F" value={fmt(data.params.distillateToFeed ?? 0.5, 2)} />
             <Readout label="Cond" value={partial ? 'PART' : 'TOTAL'} tone={partial ? 'vapor' : 'liquid'} />
-            <p className="mt-1 font-mono text-[9px] leading-tight text-plant-500">
-              {partial ? '+1 eq. stage' : '0 eq. stages'}
-            </p>
+            {data.params.internals === 'packing' ? (
+              <Readout label="Z" value={fmt((theoreticalStages - 1) * (data.params.hetp ?? 0.5), 1)} unit="m pack" />
+            ) : (
+              <Readout label="Trays" value={String(Math.ceil((theoreticalStages - 1) / (data.params.trayEfficiency ?? 0.7)))} unit="real" />
+            )}
+
           </div>
           <div>
             <p className="tag mb-1 text-plant-500">Products</p>

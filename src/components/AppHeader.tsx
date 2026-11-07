@@ -1,7 +1,8 @@
-import { RotateCcw } from 'lucide-react';
+import { Moon, RotateCcw, Sun } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { navigate, type Route } from '@/lib/route';
+import { useTheme } from '@/lib/theme';
 import { COMPONENTS } from '@/engine/components';
 import { useFlowsheet } from '@/store/flowsheetStore';
 
@@ -29,7 +30,7 @@ const tab = (active: boolean) =>
   cn(
     'whitespace-nowrap rounded px-2.5 py-1 text-[11px] transition-colors',
     active
-      ? 'bg-signal-liquid/15 text-signal-liquid shadow-[inset_0_0_0_1px_rgba(45,212,191,0.35)]'
+      ? 'bg-signal-liquid/15 text-signal-liquid shadow-[inset_0_0_0_1px_rgb(var(--sig-liquid)/0.35)]'
       : 'text-plant-300 hover:bg-white/[0.04] hover:text-plant-100',
   );
 
@@ -86,8 +87,26 @@ export function AppHeader({ route }: { route: Route }) {
         )}
       </nav>
 
-      <div className="ml-auto flex shrink-0 items-center gap-4">{route === 'flowsheet' && <FlowsheetStatus />}</div>
+      <div className="ml-auto flex shrink-0 items-center gap-4">
+        {route === 'flowsheet' && <FlowsheetStatus />}
+        <ThemeToggle />
+      </div>
     </header>
+  );
+}
+
+function ThemeToggle() {
+  const [theme, toggle] = useTheme();
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+      title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+      className="grid h-7 w-7 place-items-center rounded border border-white/[0.08] text-plant-300 transition-colors hover:border-signal-liquid/40 hover:text-signal-liquid"
+    >
+      {theme === 'dark' ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+    </button>
   );
 }
 

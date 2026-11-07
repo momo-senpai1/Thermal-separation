@@ -171,3 +171,75 @@ describe('flash drum', () => {
     expect(V!.temperature).toBeCloseTo(L!.temperature, 9);
   });
 });
+
+describe('stream equipment: cooler, pump, valve, splitter, evaporator', () => {
+  /** add a saturated-liquid feed and a unit, connect them, return the solved unit */
+  const rig = (type: Parameters<ReturnType<typeof st>['addUnit']>[0], inlet = 'in') => {
+    st().resetDemo();
+    st().addUnit('feed', { x: 0, y: 900 });
+    st().addUnit(type, { x: 300, y: 900 });
+    const f = st().nodes.filter((n) => n.type === 'feed').at(-1)!;
+    const u = st().nodes.find((n) => n.type === type)!;
+    st().onConnect({ source: f.id, sourceHandle: 'out', target: u.id, targetHandle: inlet });
+    return { f: () => st().nodes.find((n) => n.id === f.id)!, u: () => st().nodes.find((n) => n.id === u.id)! };
+  };
+  it('pump: raises the pressure, adds W = V̇·Δp/η to the liquid', () => {
+    const { f, u } = rig('pump');
+    const out = u().data.state.topProduct!;
+    const F = f().data.state.topProduct!;
+    expect(out.pressure).toBeCloseTo(400, 9);
+    const W = Number(u().data.extra!.find((r) => r[0] === 'Shaft power')![1]);
+    // benzene/toluene ~ 0.0985 m³/kmol × 100 kmol/h, Δp ≈ 299 kPa, η = 0.7 → ≈ 1.2 kW
+    expect(W).toBeGreaterThan(0.8);
+    expect(W).toBeLessThan(1.6);
+    expect(out.temperature).toBeGreaterThan(F.temperature); // a little warmer
+    expect(out.vaporFraction).toBeGreaterThan(1); // subcooled at the higher pressure
+  });
+  it('valve: a saturated liquid flashes and cools when let down (isenthalpic)', () => {
+    const { f, u } = rig('valve');
+    const out = u().data.state.topProduct!;
+    expect(out.pressure).toBeCloseTo(50, 9);
+    expect(out.temperature).toBeLessThan(f().data.state.topProduct!.temperature);
+    expect(out.vaporFraction).toBeLessThan(1); // two-phase after the valve
+  });
+  it('splitter: flows add up, conditions unchanged', () => {
+    const { f, u } = rig('splitter');
+    st().updateNodeParams(u().id, { splitFraction: 0.3 });
+    const { topProduct: a, bottomProduct: b } = u().data.state;
+    expect(a!.flowRate).toBeCloseTo(0.3 * f().data.state.topProduct!.flowRate, 9);
+    expect(a!.flowRate + b!.flowRate).toBeCloseTo(f().data.state.topProduct!.flowRate, 9);
+    expect(a!.temperature).toBe(b!.temperature);
+  });
+  it('evaporator: vaporizes exactly the set V/F and reports the duty', () => {
+    const { f, u } = rig('evaporator');
+    st().updateNodeParams(u().id, { targetVF: 0.35 });
+    const { topProduct: V, bottomProduct: L } = u().data.state;
+    const F = f().data.state.topProduct!;
+    expect(V!.flowRate / F.flowRate).toBeCloseTo(0.35, 6);
+    expect(V!.flowRate * V!.molarFractions.compA + L!.flowRate * L!.molarFractions.compA).toBeCloseTo(F.flowRate * F.molarFractions.compA, 6);
+    expect(Number(u().data.extra![0]![1])).toBeGreaterThan(0);
+  });
+  it('cooler: negative duty cools the stream', () => {
+    const { f, u } = rig('cooler');
+    expect(u().data.state.topProduct!.temperature).toBeLessThan(f().data.state.topProduct!.temperature);
+  });
+});
+
+describe('process blocks', () => {
+  it.each(['absorber', 'extractor', 'evaptrain', 'crystallizer', 'dryer'] as const)('%s solves standalone with its defaults', (type) => {
+    st().resetDemo();
+    st().addUnit(type, { x: 0, y: 1000 });
+    const b = st().nodes.find((n) => n.type === type)!;
+    expect(b.data.diag?.status).toBe('ok');
+    expect(b.data.block!.rows.length).toBeGreaterThan(2);
+  });
+  it('editing a block field re-solves it', () => {
+    st().resetDemo();
+    st().addUnit('crystallizer', { x: 0, y: 1000 });
+    const id = st().nodes.find((n) => n.type === 'crystallizer')!.id;
+    const y0 = st().nodes.find((n) => n.id === id)!.data.block!.rows.find((r) => r[0] === 'Yield')![1];
+    st().updateBlock(id, 'T2', 5);
+    const y1 = st().nodes.find((n) => n.id === id)!.data.block!.rows.find((r) => r[0] === 'Yield')![1];
+    expect(Number(y1)).toBeGreaterThan(Number(y0));
+  });
+});

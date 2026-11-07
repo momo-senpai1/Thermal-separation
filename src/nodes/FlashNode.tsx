@@ -7,16 +7,16 @@ import { NodeShell, Readout } from './NodeShell';
 function DrumSymbol() {
   return (
     <svg viewBox="0 0 64 112" className="h-[112px] w-[64px] shrink-0" aria-hidden>
-      <rect x="14" y="10" width="36" height="92" rx="18" fill="rgba(45,212,191,0.06)" stroke="#2dd4bf" strokeWidth="1.4" />
+      <rect x="14" y="10" width="36" height="92" rx="18" fill="rgb(var(--sig-liquid)/0.06)" stroke="rgb(var(--sig-liquid))" strokeWidth="1.4" />
       {/* demister pad */}
-      <path d="M17 30h30" stroke="#5c7089" strokeWidth="1" />
-      <path d="M17 34h30" stroke="#5c7089" strokeWidth="1" />
-      <path d="M19 30l4 4 4-4 4 4 4-4 4 4 4-4" stroke="#5c7089" strokeWidth="0.8" fill="none" />
+      <path d="M17 30h30" stroke="rgb(var(--plant-400))" strokeWidth="1" />
+      <path d="M17 34h30" stroke="rgb(var(--plant-400))" strokeWidth="1" />
+      <path d="M19 30l4 4 4-4 4 4 4-4 4 4 4-4" stroke="rgb(var(--plant-400))" strokeWidth="0.8" fill="none" />
       {/* liquid level */}
-      <path d="M15 74h34" stroke="#2dd4bf" strokeOpacity="0.7" strokeDasharray="3 2" />
-      <path d="M0 56h14" stroke="#5c7089" strokeWidth="1.3" />
-      <path d="M32 10V2h32" stroke="#fbbf24" strokeWidth="1.3" fill="none" />
-      <path d="M32 102v8h32" stroke="#2dd4bf" strokeWidth="1.3" fill="none" />
+      <path d="M15 74h34" stroke="rgb(var(--sig-liquid))" strokeOpacity="0.7" strokeDasharray="3 2" />
+      <path d="M0 56h14" stroke="rgb(var(--plant-400))" strokeWidth="1.3" />
+      <path d="M32 10V2h32" stroke="rgb(var(--sig-vapor))" strokeWidth="1.3" fill="none" />
+      <path d="M32 102v8h32" stroke="rgb(var(--sig-liquid))" strokeWidth="1.3" fill="none" />
     </svg>
   );
 }

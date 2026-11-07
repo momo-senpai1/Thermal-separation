@@ -37,7 +37,29 @@ export type StreamPayload = StreamConditions & {
  * `feed` extends the original contract ('distillation' | 'mixer' | 'heater')
  * so that boundary streams can be specified on the canvas.
  */
-export type UnitType = 'feed' | 'mixer' | 'heater' | 'distillation' | 'batch' | 'flash';
+export type UnitType =
+  | 'feed'
+  | 'mixer'
+  | 'splitter'
+  | 'heater'
+  | 'cooler'
+  | 'pump'
+  | 'valve'
+  | 'distillation'
+  | 'batch'
+  | 'flash'
+  | 'evaporator'
+  // standalone process blocks (their own feed, no stream ports)
+  | 'absorber'
+  | 'extractor'
+  | 'evaptrain'
+  | 'crystallizer'
+  | 'dryer';
+
+/** Unit types that are self-contained process blocks (no material-stream ports). */
+export const BLOCK_TYPES = ['absorber', 'extractor', 'evaptrain', 'crystallizer', 'dryer'] as const;
+export type BlockType = (typeof BLOCK_TYPES)[number];
+export const isBlock = (t: string | undefined): t is BlockType => (BLOCK_TYPES as readonly string[]).includes(t ?? '');
 
 export type CondenserType = 'total' | 'partial';
 
@@ -57,8 +79,24 @@ export interface UnitParams {
    * 'q' → T is computed. At fixed P and z the two are not independent.
    */
   feedSpec?: FeedSpec;
-  /** Extension (flash drum): drum pressure, kPa (default: inlet pressure) */
+  /** Extension (flash drum, evaporator): drum pressure, kPa (default: inlet pressure) */
   flashPressure?: number;
+  /** Extension (pump, valve): outlet pressure, kPa */
+  outletPressure?: number;
+  /** Extension (pump): efficiency */
+  efficiency?: number;
+  /** Extension (splitter): fraction of the inlet to outlet 1 */
+  splitFraction?: number;
+  /** Extension (evaporator): fraction of the feed to vaporize, V/F */
+  targetVF?: number;
+  /** Extension (distillation): column internals */
+  internals?: 'trays' | 'packing';
+  /** Extension (distillation): overall tray efficiency */
+  trayEfficiency?: number;
+  /** Extension (distillation): height equivalent to a theoretical plate, m */
+  hetp?: number;
+  /** Extension (process blocks): the block's own specification */
+  block?: Record<string, number | string>;
   /** Extension (batch still): operating mode */
   batchMode?: 'rayleigh' | 'constant-reflux';
   /** Extension (batch still): distilled fraction D/L₀ at which the cut is taken */
@@ -129,6 +167,10 @@ export type UnitNodeData = {
   diag?: Diagnostics;
   column?: ColumnResults | null;
   batch?: BatchResults | null;
+  /** process-block results: [label, value, unit] rows */
+  block?: { rows: [string, string, string][] } | null;
+  /** extra result rows for stream units (pump power, evaporator duty, …) */
+  extra?: [string, string, string][] | null;
 };
 
 /** Batch-still results (per batch, at the chosen cut). */
@@ -157,8 +199,18 @@ export const PORTS = {
   distillation: { inlets: ['feed'] as const, outlets: ['distillate', 'bottoms'] as const },
   batch: { inlets: ['charge'] as const, outlets: ['distillate', 'residue'] as const },
   flash: { inlets: ['in'] as const, outlets: ['vapor', 'liquid'] as const },
+  evaporator: { inlets: ['in'] as const, outlets: ['vapor', 'liquid'] as const },
+  splitter: { inlets: ['in'] as const, outlets: ['out-1', 'out-2'] as const },
+  cooler: { inlets: ['in'] as const, outlets: ['out'] as const },
+  pump: { inlets: ['in'] as const, outlets: ['out'] as const },
+  valve: { inlets: ['in'] as const, outlets: ['out'] as const },
+  absorber: { inlets: [] as const, outlets: [] as const },
+  extractor: { inlets: [] as const, outlets: [] as const },
+  evaptrain: { inlets: [] as const, outlets: [] as const },
+  crystallizer: { inlets: [] as const, outlets: [] as const },
+  dryer: { inlets: [] as const, outlets: [] as const },
 } satisfies Record<UnitType, { inlets: readonly string[]; outlets: readonly string[] }>;
 
 /** Which unit-state slot an outlet port reads from. */
 export const outletSlot = (handle: string | null | undefined): keyof UnitState =>
-  handle === 'bottoms' || handle === 'residue' || handle === 'liquid' ? 'bottomProduct' : 'topProduct';
+  handle === 'bottoms' || handle === 'residue' || handle === 'liquid' || handle === 'out-2' ? 'bottomProduct' : 'topProduct';

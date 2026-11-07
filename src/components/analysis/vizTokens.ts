@@ -1,27 +1,31 @@
 /**
- * Chart palette — validated with the dataviz palette validator on the dark
- * chart surface #0a0f15, all pairs (every line is on screen together):
- * lightness band, chroma, CVD ΔE ≥ 9.4, normal-vision ΔE ≥ 20.9, contrast ≥ 3:1.
+ * Chart palette as CSS variables, so charts follow the theme.
+ *
+ * Dark values were validated with the dataviz palette validator on the dark
+ * surface (#0a0f15, all pairs): CVD ΔE ≥ 9.4, normal-vision ΔE ≥ 20.9, contrast ≥ 3:1.
+ * Light values are the same hues stepped for a white surface (reference
+ * palette's light column); aqua sits below 3:1 there, so every series also
+ * carries a legend entry / direct label.
  * Rectifying vs stripping share a hue and are separated by dash + direct label.
  */
 export const VIZ = {
-  surface: '#0a0f15',
-  grid: '#1b2633',
-  axis: '#273546',
+  surface: 'var(--viz-surface)',
+  grid: 'var(--viz-grid)',
+  axis: 'var(--viz-axis)',
   /** text tokens — never the series colour */
-  text: '#dbe3ec',
-  textMuted: '#8798ad',
-  textFaint: '#5c7089',
+  text: 'var(--viz-text)',
+  textMuted: 'var(--viz-text-muted)',
+  textFaint: 'var(--viz-text-faint)',
 
-  equilibrium: '#3987e5', // blue
-  operating: '#d95926', // orange (rectifying solid, stripping dashed)
-  qLine: '#199e70', // aqua
+  equilibrium: 'var(--viz-eq)', // blue
+  operating: 'var(--viz-op)', // orange (rectifying solid, stripping dashed)
+  qLine: 'var(--viz-q)', // aqua
   /** neutral construction ink: stage steps, diagonal */
-  steps: '#b6c2d1',
-  diagonal: '#3a4b60',
+  steps: 'var(--viz-steps)',
+  diagonal: 'var(--viz-diag)',
 
-  bubble: '#3987e5', // liquid curve
-  dew: '#d95926', // vapour curve
+  bubble: 'var(--viz-eq)', // liquid curve
+  dew: 'var(--viz-op)', // vapour curve
 } as const;
 
 export const STRIPPING_DASH = '7 4';

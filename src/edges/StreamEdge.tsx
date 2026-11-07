@@ -4,10 +4,10 @@ import type { StreamEdge as StreamEdgeT } from '@/store/flowsheetStore';
 
 /** Colour the pipe by thermal condition: liquid (q ≥ 1) teal, two-phase blend, vapour (q ≤ 0) amber. */
 function phaseColor(q: number, resolved: boolean) {
-  if (!resolved) return '#3a4b60';
-  if (q >= 1) return '#2dd4bf';
-  if (q <= 0) return '#fbbf24';
-  return '#a3e635'; // two-phase
+  if (!resolved) return 'rgb(var(--plant-500))';
+  if (q >= 1) return 'rgb(var(--sig-liquid))';
+  if (q <= 0) return 'rgb(var(--sig-vapor))';
+  return 'rgb(var(--sig-two))'; // two-phase
 }
 
 export function StreamEdge(props: EdgeProps<StreamEdgeT>) {

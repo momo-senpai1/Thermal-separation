@@ -8,7 +8,9 @@
  */
 
 import {
+  isBlock,
   outletSlot,
+  type BlockType,
   type BatchResults,
   type ColumnResults,
   type Diagnostics,
@@ -19,6 +21,8 @@ import {
 } from '@/types/process';
 import { DEFAULT_SYSTEM, type BinarySystem } from './components';
 import { batchAt, simulateBatch } from './batch';
+import { BLOCKS } from './blocks';
+import { brent } from './numerics';
 import { rateColumn } from './mccabeThiele';
 import { alphaSystem } from './vle/systems';
 import {
@@ -30,6 +34,8 @@ import {
   dewTemperature,
   enthalpyTP,
   evaluateStream,
+  flashTP,
+  fromPH,
   heatStream,
   liquidEnthalpy,
   mixStreams,
@@ -61,6 +67,8 @@ export interface UnitSolution {
   diag: Diagnostics;
   column: ColumnResults | null;
   batch?: BatchResults | null;
+  block?: { rows: [string, string, string][] } | null;
+  extra?: [string, string, string][] | null;
 }
 
 export interface FlowsheetSolution {
@@ -155,6 +163,118 @@ function solveFlash(comps: Comps, data: UnitNodeData, inlet: StreamConditions): 
     },
     diag: withWarnings(warnings),
     column: null,
+  };
+}
+
+const molarMass = (comps: Comps, z: number[]) => comps.reduce((m, c, i) => m + c.mw * (z[i] ?? 0), 0);
+/** liquid molar volume, m³/kmol: (kg/kmol) / (kg/m³) */
+const molarVolumeL = (comps: Comps, z: number[]) => comps.reduce((v, c, i) => v + ((z[i] ?? 0) * c.mw) / c.rhoL, 0);
+
+/** Cooler / condenser: the heater balance with (usually) negative duty. */
+function solveCooler(comps: Comps, data: UnitNodeData, inlet: StreamConditions): UnitSolution {
+  const sol = solveHeater(comps, data, inlet);
+  return { ...sol, extra: [['Duty removed', (-data.params.heatDuty).toFixed(0), 'kW']] };
+}
+
+/**
+ * Pump: raises the pressure of a liquid. Shaft work W = V̇·Δp/η goes into the
+ * liquid's enthalpy (PH flash at the outlet pressure).
+ */
+function solvePump(comps: Comps, data: UnitNodeData, inlet: StreamConditions): UnitSolution {
+  const Pout = data.params.outletPressure ?? inlet.pressure + 200;
+  const eta = data.params.efficiency ?? 0.7;
+  const z = toVector(inlet.molarFractions);
+  const Vdot = (inlet.flowRate * molarVolumeL(comps, z)) / 3600; // m³/s
+  const dP = (Pout - inlet.pressure) * 1000; // Pa
+  const W = (Vdot * dP) / eta / 1000; // kW
+  const Hin = enthalpyTP(comps, z, inlet.temperature, inlet.pressure);
+  const out = fromPH(comps, inlet.flowRate, z, Pout, Hin + (3600 * W) / inlet.flowRate);
+  const warnings = validityWarnings(comps, out.T);
+  if (inlet.vaporFraction < 1 - 1e-6) warnings.push('Vapour at the pump suction — cavitation risk (cool the feed or raise the suction pressure).');
+  if (Pout < inlet.pressure) warnings.push('Outlet pressure below inlet — use a valve to let down.');
+  return {
+    state: { topProduct: toConditions(out), bottomProduct: null },
+    diag: withWarnings(warnings),
+    column: null,
+    extra: [
+      ['Shaft power', W.toFixed(2), 'kW'],
+      ['Volume flow', (Vdot * 3600).toFixed(2), 'm³/h'],
+      ['Head Δp', (Pout - inlet.pressure).toFixed(0), 'kPa'],
+    ],
+  };
+}
+
+/** Valve: isenthalpic let-down to the outlet pressure — a liquid near its bubble point flashes. */
+function solveValve(comps: Comps, data: UnitNodeData, inlet: StreamConditions): UnitSolution {
+  const Pout = Math.min(data.params.outletPressure ?? inlet.pressure / 2, inlet.pressure);
+  const z = toVector(inlet.molarFractions);
+  const Hin = enthalpyTP(comps, z, inlet.temperature, inlet.pressure);
+  const out = fromPH(comps, inlet.flowRate, z, Pout, Hin);
+  return {
+    state: { topProduct: toConditions(out), bottomProduct: null },
+    diag: withWarnings(validityWarnings(comps, out.T)),
+    column: null,
+    extra: [
+      ['Pressure drop', (inlet.pressure - Pout).toFixed(1), 'kPa'],
+      ['Flashed V/F', out.beta.toFixed(3), ''],
+    ],
+  };
+}
+
+/** Splitter: one stream into two of identical conditions. */
+function solveSplitter(data: UnitNodeData, inlet: StreamConditions): UnitSolution {
+  const fr = Math.min(1, Math.max(0, data.params.splitFraction ?? 0.5));
+  return {
+    state: {
+      topProduct: { ...inlet, flowRate: inlet.flowRate * fr },
+      bottomProduct: { ...inlet, flowRate: inlet.flowRate * (1 - fr) },
+    },
+    diag: withWarnings([]),
+    column: null,
+  };
+}
+
+/**
+ * Evaporator (single stage): vaporize a set fraction V/F of the feed at the
+ * drum pressure; the required heat duty is the result.
+ */
+function solveEvaporatorUnit(comps: Comps, data: UnitNodeData, inlet: StreamConditions): UnitSolution {
+  const P = data.params.flashPressure ?? inlet.pressure;
+  const beta = Math.min(0.999, Math.max(0.001, data.params.targetVF ?? 0.5));
+  const z = toVector(inlet.molarFractions);
+  const Tb = bubbleTemperature(comps, z, P).T;
+  const Td = dewTemperature(comps, z, P).T;
+  const T = brent((t) => flashTP(comps, z, t, P).beta - beta, Tb + 1e-9, Td - 1e-9, { tol: 1e-10 });
+  const f = flashTP(comps, z, T, P);
+  const Hout = (1 - f.beta) * liquidEnthalpy(comps, f.x, T) + f.beta * vaporEnthalpy(comps, f.y, T);
+  const Hin = enthalpyTP(comps, z, inlet.temperature, inlet.pressure);
+  const Q = (inlet.flowRate * (Hout - Hin)) / 3600;
+  const V = inlet.flowRate * f.beta;
+  return {
+    state: {
+      topProduct: { flowRate: V, temperature: T, pressure: P, vaporFraction: 0, molarFractions: toBinary(f.y) },
+      bottomProduct: { flowRate: inlet.flowRate - V, temperature: T, pressure: P, vaporFraction: 1, molarFractions: toBinary(f.x) },
+    },
+    diag: withWarnings(validityWarnings(comps, T)),
+    column: null,
+    extra: [
+      ['Heat duty', Q.toFixed(1), 'kW'],
+      ['Temperature', (T - 273.15).toFixed(1), '°C'],
+      ['Vapour', V.toFixed(2), 'kmol/h'],
+      ['Vapour mass', ((V * molarMass(comps, f.y)) / 1000).toFixed(3), 't/h'],
+    ],
+  };
+}
+
+/** Process block: self-contained, solved with its own specification. */
+function solveBlock(type: BlockType, data: UnitNodeData): UnitSolution {
+  const def = BLOCKS[type];
+  const r = def.solve({ ...def.defaults, ...(data.params.block ?? {}) });
+  return {
+    state: { topProduct: null, bottomProduct: null },
+    diag: r.ok ? { status: 'ok', messages: [] } : { status: 'error', messages: [r.error ?? 'No solution'] },
+    column: null,
+    block: { rows: r.rows },
   };
 }
 
@@ -366,6 +486,8 @@ export function solveFlowsheet(
     try {
       if (type === 'feed') {
         sol = solveFeed(comps, node.data);
+      } else if (isBlock(type)) {
+        sol = solveBlock(type, node.data);
       } else if (inEdges.length === 0) {
         sol = idle('No inlet stream connected');
       } else if (inlets.some((s) => s === null)) {
@@ -376,6 +498,11 @@ export function solveFlowsheet(
         else if (type === 'heater') sol = solveHeater(comps, node.data, ins[0]!);
         else if (type === 'batch') sol = solveBatchStill(comps, node.data, ins[0]!);
         else if (type === 'flash') sol = solveFlash(comps, node.data, ins[0]!);
+        else if (type === 'cooler') sol = solveCooler(comps, node.data, ins[0]!);
+        else if (type === 'pump') sol = solvePump(comps, node.data, ins[0]!);
+        else if (type === 'valve') sol = solveValve(comps, node.data, ins[0]!);
+        else if (type === 'splitter') sol = solveSplitter(node.data, ins[0]!);
+        else if (type === 'evaporator') sol = solveEvaporatorUnit(comps, node.data, ins[0]!);
         else sol = solveColumn(comps, node.data, ins[0]!);
       }
     } catch (err) {

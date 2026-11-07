@@ -22,7 +22,7 @@ export default function App() {
   return (
     <ReactFlowProvider>
       <div className="relative flex h-full flex-col gap-2 p-2">
-        <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_at_top,rgba(45,212,191,0.06),transparent_60%)]" />
+        <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_at_top,rgb(var(--sig-liquid)/0.06),transparent_60%)]" />
         <AppHeader route={route} />
         {route === 'flowsheet' ? (
           <main className="relative flex min-h-0 flex-1 gap-2">

@@ -11,8 +11,8 @@ export function FeedNode({ data, selected }: NodeProps<UnitNode>) {
       <div className="flex gap-3">
         {/* off-page connector / source symbol */}
         <svg viewBox="0 0 40 56" className="h-14 w-10 shrink-0" aria-hidden>
-          <path d="M4 8h20l12 20-12 20H4z" fill="rgba(45,212,191,0.06)" stroke="#2dd4bf" strokeWidth="1.5" />
-          <path d="M10 28h14m-4-4 4 4-4 4" stroke="#2dd4bf" strokeWidth="1.5" fill="none" />
+          <path d="M4 8h20l12 20-12 20H4z" fill="rgb(var(--sig-liquid)/0.06)" stroke="rgb(var(--sig-liquid))" strokeWidth="1.5" />
+          <path d="M10 28h14m-4-4 4 4-4 4" stroke="rgb(var(--sig-liquid))" strokeWidth="1.5" fill="none" />
         </svg>
         <div className="min-w-[104px] flex-1">
           <Readout label="F" value={fmt(s?.flowRate)} unit="kmol/h" />

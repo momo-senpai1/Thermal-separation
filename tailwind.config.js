@@ -1,19 +1,15 @@
 import headlessui from '@headlessui/tailwindcss';
 import animate from 'tailwindcss-animate';
 
+/** Theme-aware colour from a CSS variable holding an RGB triplet. */
+const v = (name) => `rgb(var(--${name}) / <alpha-value>)`;
+
 const TREMOR = {
-  brand: {
-    faint: '#0d2a27',
-    muted: '#134e48',
-    subtle: '#14b8a6',
-    DEFAULT: '#2dd4bf',
-    emphasis: '#5eead4',
-    inverted: '#06090d',
-  },
-  background: { muted: '#0a0f15', subtle: '#121a24', DEFAULT: '#0e141c', emphasis: '#b6c2d1' },
-  border: { DEFAULT: 'rgba(148,163,184,0.10)' },
-  ring: { DEFAULT: 'rgba(148,163,184,0.10)' },
-  content: { subtle: '#5c7089', DEFAULT: '#8798ad', emphasis: '#dbe3ec', strong: '#f1f5f9', inverted: '#06090d' },
+  brand: { faint: v('plant-850'), muted: v('plant-700'), subtle: v('sig-liquid'), DEFAULT: v('sig-liquid'), emphasis: v('sig-liquid'), inverted: v('plant-950') },
+  background: { muted: v('plant-900'), subtle: v('plant-800'), DEFAULT: v('plant-850'), emphasis: v('plant-200') },
+  border: { DEFAULT: v('plant-700') },
+  ring: { DEFAULT: v('plant-700') },
+  content: { subtle: v('plant-400'), DEFAULT: v('plant-300'), emphasis: v('plant-100'), strong: v('plant-100'), inverted: v('plant-950') },
 };
 
 /** @type {import('tailwindcss').Config} */
@@ -42,29 +38,13 @@ export default {
         muted: { DEFAULT: 'hsl(var(--muted))', foreground: 'hsl(var(--muted-foreground))' },
         accent: { DEFAULT: 'hsl(var(--accent))', foreground: 'hsl(var(--accent-foreground))' },
         // Control-room signal palette
-        plant: {
-          950: '#06090d',
-          900: '#0a0f15',
-          850: '#0e141c',
-          800: '#121a24',
-          700: '#1b2633',
-          600: '#273546',
-          500: '#3a4b60',
-          400: '#5c7089',
-          300: '#8798ad',
-          200: '#b6c2d1',
-          100: '#dbe3ec',
-        },
+        plant: Object.fromEntries([950, 900, 850, 800, 700, 600, 500, 400, 300, 200, 100].map((k) => [k, v(`plant-${k}`)])),
         // Tremor tokens (dark-only app: both scopes map to the control-room palette)
         tremor: TREMOR,
         'dark-tremor': TREMOR,
-        signal: {
-          liquid: '#2dd4bf', // teal  — liquid / subcooled
-          vapor: '#fbbf24', // amber — vapour / superheated
-          heat: '#f97316', // orange — heat duty
-          alarm: '#f43f5e',
-          ok: '#4ade80',
-        },
+        signal: { liquid: v('sig-liquid'), vapor: v('sig-vapor'), heat: v('sig-heat'), alarm: v('sig-alarm'), ok: v('sig-ok') },
+        // flips to dark ink in light mode, so white/[x] overlays and hairlines work in both themes
+        white: v('white'),
       },
       borderRadius: {
         'tremor-small': '0.25rem',
