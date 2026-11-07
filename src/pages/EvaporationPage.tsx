@@ -135,7 +135,7 @@ export default function EvaporationPage() {
                       <Cell key={s.n} fill={Number(s.n) === N ? VIZ.equilibrium : VIZ.diagonal} />
                     ))}
                   </Bar>
-                  <Tooltip cursor={{ fill: 'rgba(148,163,184,0.06)' }} contentStyle={{ background: '#06090d', border: '1px solid rgba(255,255,255,0.1)', fontSize: 10 }} formatter={(v: number) => fmt(v, 2)} />
+                  <Tooltip cursor={{ fill: 'rgba(148,163,184,0.06)' }} contentStyle={{ background: 'rgb(var(--plant-950))', border: '1px solid rgb(var(--white)/0.1)', fontSize: 10 }} formatter={(v: number) => fmt(v, 2)} />
                 </BarChart>
               </ResponsiveContainer>
               <p className="text-[10px] text-plant-500">Each effect adds a little less economy (≈ N·0.8) while the total area grows — the economic optimum balances steam against surface. MVR: {fmt(comp.specific, 1)} kWh of electricity per tonne evaporated.</p>

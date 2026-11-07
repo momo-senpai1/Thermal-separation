@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import type { Diagnostics, SolveStatus } from '@/types/process';
+import { t } from '@/i18n';
 
 interface NodeShellProps {
   tag: string;
@@ -44,7 +45,7 @@ export function NodeShell({ tag, label, selected, diag, accent = 'liquid', class
       <header className="flex items-center justify-between gap-3 border-b border-white/[0.05] px-3 py-1.5">
         <span className="tag text-plant-200">{tag}</span>
         <span className="flex items-center gap-1.5">
-          <span className="truncate text-[10px] text-plant-400">{label}</span>
+          <span className="truncate text-[10px] text-plant-400">{t(label)}</span>
           <span title={diag?.messages.join('\n') || 'Solved'} className={cn('h-1.5 w-1.5 rounded-full', LED[status])} />
         </span>
       </header>
@@ -83,7 +84,7 @@ export function Readout({
   return (
     <div className="flex items-baseline justify-between gap-3 text-[11px] leading-5">
       <span className="font-mono text-plant-400">
-        {label}
+        {t(label)}
         {computed && <span className="ml-1 align-super text-[7px] text-plant-500">calc</span>}
       </span>
       <span

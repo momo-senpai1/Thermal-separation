@@ -1,10 +1,14 @@
 import { ParamSlider } from '@/components/ParamSlider';
 import { Segmented } from '@/components/ui/segmented';
+import { Select } from '@/components/workbench/controls';
+import { BLOCKS } from '@/engine/blocks';
 import { COMPONENTS } from '@/engine/components';
+import { isBlock } from '@/types/process';
 import { navigate } from '@/lib/route';
 import { cn, cToK, fmt, kToC } from '@/lib/utils';
 import { DEFAULT_FEED, useFlowsheet, type StreamEdge, type UnitNode } from '@/store/flowsheetStore';
 import type { CondenserType, Diagnostics, FeedSpec, StreamConditions } from '@/types/process';
+import { t } from '@/i18n';
 
 export function Inspector() {
   const node = useFlowsheet((s) => s.nodes.find((n) => n.selected));
@@ -13,9 +17,9 @@ export function Inspector() {
   return (
     <aside className="glass flex w-72 shrink-0 flex-col overflow-hidden">
       <div className="border-b border-white/[0.05] px-3 py-2.5">
-        <p className="tag text-plant-400">Inspector</p>
+        <p className="tag text-plant-400">{t('Inspector')}</p>
         <p className="mt-0.5 truncate text-[10px] text-plant-500">
-          {node ? `${node.data.tag} · ${node.data.label}` : edge ? `Stream ${edge.data?.tag}` : 'Select a unit or stream'}
+          {node ? `${node.data.tag} · ${t(node.data.label)}` : edge ? `${t('Stream')} ${edge.data?.tag}` : t('Select a unit or stream')}
         </p>
       </div>
       <div className="flex-1 space-y-5 overflow-y-auto p-3">
@@ -37,7 +41,7 @@ export function Inspector() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="space-y-3">
-      <p className="tag border-b border-white/[0.04] pb-1 text-plant-500">{title}</p>
+      <p className="tag border-b border-white/[0.04] pb-1 text-plant-500">{t(title)}</p>
       {children}
     </section>
   );
@@ -169,6 +173,29 @@ function NodePanel({ node }: { node: UnitNode }) {
                 ]}
               />
             </div>
+            <div className="space-y-1.5">
+              <p className="text-[11px] text-plant-300">Internals</p>
+              <Segmented<'trays' | 'packing'>
+                value={params.internals ?? 'trays'}
+                onChange={(v) => updateParams(node.id, { internals: v })}
+                options={[
+                  { value: 'trays', label: 'Trays', hint: 'Sieve / valve / bubble-cap trays' },
+                  { value: 'packing', label: 'Packing', hint: 'Random or structured packing' },
+                ]}
+              />
+            </div>
+            {(params.internals ?? 'trays') === 'trays' ? (
+              <ParamSlider label="Overall tray efficiency" symbol="E_o" min={0.3} max={1} step={0.01} digits={2}
+                value={params.trayEfficiency ?? 0.7} onChange={(v) => updateParams(node.id, { trayEfficiency: v })} />
+            ) : (
+              <ParamSlider label="HETP" symbol="HETP" unit="m" min={0.15} max={1.2} step={0.01} digits={2}
+                value={params.hetp ?? 0.5} onChange={(v) => updateParams(node.id, { hetp: v })} />
+            )}
+            <p className="font-mono text-[10px] text-plant-400">
+              {(params.internals ?? 'trays') === 'trays'
+                ? `${Math.ceil((params.theoreticalStages - 1) / (params.trayEfficiency ?? 0.7))} real trays + reboiler (${params.theoreticalStages - 1} theoretical above it)`
+                : `packed height ${((params.theoreticalStages - 1) * (params.hetp ?? 0.5)).toFixed(1)} m for ${params.theoreticalStages - 1} theoretical stages`}
+            </p>
             <p className="text-[10px] leading-relaxed text-plant-500">
               N includes the reboiler. Rating mode: McCabe–Thiele stepping (CMO, constant α) with optimal feed
               stage; x<sub>D</sub> is solved so the bottoms close the balance.
@@ -226,6 +253,71 @@ function NodePanel({ node }: { node: UnitNode }) {
           )}
         </>
       );
+    case 'cooler':
+      return (
+        <>
+          <Section title="Cooler / condenser">
+            <ParamSlider label="Heat duty (negative = cooling)" symbol="Q" unit="kW" min={-4000} max={0} step={5} digits={0}
+              value={params.heatDuty} onChange={(v) => updateParams(node.id, { heatDuty: v })} />
+            <p className="text-[10px] leading-relaxed text-plant-500">Removing the latent heat condenses a vapour; beyond that the liquid is sub-cooled (q &gt; 1).</p>
+          </Section>
+          {state.topProduct && <Section title="Outlet"><KV rows={streamRows(state.topProduct)} /></Section>}
+        </>
+      );
+    case 'pump':
+      return (
+        <>
+          <Section title="Pump">
+            <ParamSlider label="Discharge pressure" symbol="p" unit="kPa" min={50} max={2000} step={5} digits={0}
+              value={params.outletPressure ?? 400} onChange={(v) => updateParams(node.id, { outletPressure: v })} />
+            <ParamSlider label="Efficiency" symbol="η" min={0.3} max={0.9} step={0.01} digits={2}
+              value={params.efficiency ?? 0.7} onChange={(v) => updateParams(node.id, { efficiency: v })} />
+            <p className="text-[10px] leading-relaxed text-plant-500">Shaft power W = V̇·Δp/η; the work ends up as a little heat in the liquid.</p>
+          </Section>
+          <ExtraRows node={node} />
+          {state.topProduct && <Section title="Outlet"><KV rows={streamRows(state.topProduct)} /></Section>}
+        </>
+      );
+    case 'valve':
+      return (
+        <>
+          <Section title="Valve">
+            <ParamSlider label="Downstream pressure" symbol="p" unit="kPa" min={5} max={1000} step={1} digits={0}
+              value={params.outletPressure ?? 50} onChange={(v) => updateParams(node.id, { outletPressure: v })} />
+            <p className="text-[10px] leading-relaxed text-plant-500">Isenthalpic let-down: a liquid at its bubble point partly flashes and cools.</p>
+          </Section>
+          <ExtraRows node={node} />
+          {state.topProduct && <Section title="Outlet"><KV rows={streamRows(state.topProduct)} /></Section>}
+        </>
+      );
+    case 'splitter':
+      return (
+        <Section title="Splitter">
+          <ParamSlider label="Fraction to outlet 1" symbol="s" min={0} max={1} step={0.01} digits={2}
+            value={params.splitFraction ?? 0.5} onChange={(v) => updateParams(node.id, { splitFraction: v })} />
+          <p className="text-[10px] leading-relaxed text-plant-500">Both outlets keep the inlet temperature, pressure and composition (a reflux or recycle split).</p>
+        </Section>
+      );
+    case 'evaporator':
+      return (
+        <>
+          <Section title="Evaporator">
+            <ParamSlider label="Fraction vaporized" symbol="V/F" min={0.01} max={0.99} step={0.01} digits={2}
+              value={params.targetVF ?? 0.4} onChange={(v) => updateParams(node.id, { targetVF: v })} />
+            <ParamSlider label="Pressure" symbol="P" unit="kPa" min={10} max={500} step={0.5} digits={1}
+              value={params.flashPressure ?? 101.325} onChange={(v) => updateParams(node.id, { flashPressure: v })} />
+            <p className="text-[10px] leading-relaxed text-plant-500">Specify how much to boil off; the heating duty follows from the energy balance.</p>
+          </Section>
+          <ExtraRows node={node} />
+          {state.bottomProduct && <Section title="Concentrate (liquid)"><KV rows={streamRows(state.bottomProduct)} /></Section>}
+        </>
+      );
+    case 'absorber':
+    case 'extractor':
+    case 'evaptrain':
+    case 'crystallizer':
+    case 'dryer':
+      return <BlockPanel node={node} />;
     case 'batch': {
       const b = node.data.batch;
       const mode = params.batchMode ?? 'constant-reflux';
@@ -293,6 +385,47 @@ function NodePanel({ node }: { node: UnitNode }) {
   }
 }
 
+function ExtraRows({ node }: { node: UnitNode }) {
+  if (!node.data.extra?.length) return null;
+  return (
+    <Section title="Results">
+      <KV rows={node.data.extra.map(([a, b, c]) => [a, b, c] as [string, string, string])} />
+    </Section>
+  );
+}
+
+/** Generic form for a process block, built from its field definitions. */
+function BlockPanel({ node }: { node: UnitNode }) {
+  const updateBlock = useFlowsheet((s) => s.updateBlock);
+  if (!isBlock(node.type)) return null;
+  const def = BLOCKS[node.type];
+  const spec = { ...def.defaults, ...(node.data.params.block ?? {}) };
+  return (
+    <>
+      <Section title={def.title}>
+        <p className="text-[10px] leading-relaxed text-plant-500">Standalone process block: its feed is specified here, not by a stream.</p>
+        {def.fields.map((f) =>
+          f.options ? (
+            <div key={f.key} className="space-y-1">
+              <p className="text-[11px] text-plant-300">{f.label}</p>
+              <Select value={String(spec[f.key])} options={f.options} onChange={(v) => updateBlock(node.id, f.key, v)} ariaLabel={f.label} />
+            </div>
+          ) : (
+            <ParamSlider key={f.key} label={f.label} symbol={f.symbol} unit={f.unit} min={f.min!} max={f.max!} step={f.step!} digits={f.digits}
+              value={Number(spec[f.key])} onChange={(v) => updateBlock(node.id, f.key, f.digits === 0 ? Math.round(v) : v)} />
+          ),
+        )}
+      </Section>
+      {node.data.block && node.data.block.rows.length > 0 && (
+        <Section title="Results">
+          <KV rows={node.data.block.rows} />
+        </Section>
+      )}
+      <OpenButton label="Open the full module" onClick={() => navigate(def.route, def.routeQuery)} />
+    </>
+  );
+}
+
 function OpenButton({ label, onClick }: { label: string; onClick: () => void }) {
   return (
     <button
@@ -300,7 +433,7 @@ function OpenButton({ label, onClick }: { label: string; onClick: () => void }) 
       onClick={onClick}
       className="w-full rounded-md border border-signal-liquid/40 bg-signal-liquid/[0.07] py-1.5 text-[11px] text-signal-liquid transition-colors hover:bg-signal-liquid/15"
     >
-      {label} →
+      {t(label)} →
     </button>
   );
 }
@@ -339,7 +472,7 @@ function StreamPanel({ edge }: { edge: StreamEdge }) {
 function Empty() {
   return (
     <div className="space-y-2 text-[11px] leading-relaxed text-plant-500">
-      <p>Click a unit to edit its parameters, or a stream to read its conditions.</p>
+      <p>{t('Click a unit to edit its parameters, or a stream to read its conditions.')}</p>
       <p className="font-mono text-[10px]">⌫ delete · drag handle → handle to connect · scroll to zoom</p>
     </div>
   );

@@ -359,7 +359,7 @@ export function evaluateStream(comps: Comps, s: MaterialStream): StreamState {
   return { ...s, H, beta: f.beta, phase: f.phase, q: thermalCondition(comps, s.z, s.P, H), x: f.x, y: f.y };
 }
 
-function fromPH(comps: Comps, F: number, z: number[], P: number, H: number): StreamState {
+export function fromPH(comps: Comps, F: number, z: number[], P: number, H: number): StreamState {
   const f = flashPH(comps, z, P, H);
   return { F, T: f.T, P, z, H, beta: f.beta, phase: f.phase, q: thermalCondition(comps, z, P, H), x: f.x, y: f.y };
 }

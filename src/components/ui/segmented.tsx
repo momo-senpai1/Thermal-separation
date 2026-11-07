@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils';
+import { t } from '@/i18n';
 
 interface SegmentedProps<T extends string> {
   value: T;
@@ -13,16 +14,16 @@ export function Segmented<T extends string>({ value, options, onChange }: Segmen
         <button
           key={o.value}
           type="button"
-          title={o.hint}
+          title={o.hint && t(o.hint)}
           onClick={() => onChange(o.value)}
           className={cn(
             'rounded px-2 py-1 font-mono text-[10px] uppercase tracking-wider transition-colors',
             value === o.value
-              ? 'bg-signal-liquid/15 text-signal-liquid shadow-[inset_0_0_0_1px_rgba(45,212,191,0.4)]'
+              ? 'bg-signal-liquid/15 text-signal-liquid shadow-[inset_0_0_0_1px_rgb(var(--sig-liquid)/0.4)]'
               : 'text-plant-400 hover:text-plant-200',
           )}
         >
-          {o.label}
+          {t(o.label)}
         </button>
       ))}
     </div>

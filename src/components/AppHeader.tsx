@@ -1,9 +1,11 @@
-import { RotateCcw } from 'lucide-react';
+import { Moon, RotateCcw, Sun } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { navigate, type Route } from '@/lib/route';
+import { useTheme } from '@/lib/theme';
 import { COMPONENTS } from '@/engine/components';
 import { useFlowsheet } from '@/store/flowsheetStore';
+import { LANGS, t, useLang } from '@/i18n';
 
 type NavItem = { route: Route; label: string };
 type NavGroup = { label: string; items: NavItem[] };
@@ -29,7 +31,7 @@ const tab = (active: boolean) =>
   cn(
     'whitespace-nowrap rounded px-2.5 py-1 text-[11px] transition-colors',
     active
-      ? 'bg-signal-liquid/15 text-signal-liquid shadow-[inset_0_0_0_1px_rgba(45,212,191,0.35)]'
+      ? 'bg-signal-liquid/15 text-signal-liquid shadow-[inset_0_0_0_1px_rgb(var(--sig-liquid)/0.35)]'
       : 'text-plant-300 hover:bg-white/[0.04] hover:text-plant-100',
   );
 
@@ -39,7 +41,7 @@ function Group({ g, route }: { g: NavGroup; route: Route }) {
   return (
     <div className="relative" onMouseLeave={() => setOpen(false)}>
       <button type="button" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)} className={tab(!!active)}>
-        {active ? `${g.label} · ${active.label}` : g.label} ▾
+        {active ? `${t(g.label)} · ${t(active.label)}` : t(g.label)} ▾
       </button>
       {open && (
         <div role="menu" className="glass absolute left-0 top-full z-50 mt-1 min-w-[190px] !bg-plant-900/95 p-1">
@@ -54,7 +56,7 @@ function Group({ g, route }: { g: NavGroup; route: Route }) {
               }}
               className={cn('block w-full rounded px-2.5 py-1.5 text-left text-[11px]', i.route === route ? 'text-signal-liquid' : 'text-plant-200 hover:bg-white/[0.05]')}
             >
-              {i.label}
+              {t(i.label)}
             </button>
           ))}
         </div>
@@ -74,20 +76,64 @@ export function AppHeader({ route }: { route: Route }) {
         <span className="text-sm font-semibold tracking-tight text-plant-100">Thermal Separation</span>
       </div>
 
-      <nav aria-label="Modules" className="flex min-w-0 items-center gap-0.5">
+      <nav aria-label={t('Modules')} className="flex min-w-0 items-center gap-0.5">
         {NAV.map((n) =>
           'items' in n ? (
             <Group key={n.label} g={n} route={route} />
           ) : (
             <button key={n.route} type="button" onClick={() => navigate(n.route)} aria-current={route === n.route ? 'page' : undefined} className={tab(route === n.route)}>
-              {n.label}
+              {t(n.label)}
             </button>
           ),
         )}
       </nav>
 
-      <div className="ml-auto flex shrink-0 items-center gap-4">{route === 'flowsheet' && <FlowsheetStatus />}</div>
+      <div className="ml-auto flex shrink-0 items-center gap-4">
+        {route === 'flowsheet' && <FlowsheetStatus />}
+        <LangSwitch />
+        <ThemeToggle />
+      </div>
     </header>
+  );
+}
+
+function LangSwitch() {
+  const lang = useLang((s) => s.lang);
+  const setLang = useLang((s) => s.setLang);
+  return (
+    <div role="group" aria-label={t('Language')} className="flex rounded border border-white/[0.08] p-0.5">
+      {LANGS.map((l) => (
+        <button
+          key={l.id}
+          type="button"
+          lang={l.id}
+          title={l.name}
+          aria-pressed={lang === l.id}
+          onClick={() => setLang(l.id)}
+          className={cn(
+            'rounded-sm px-1.5 py-0.5 font-mono text-[10px] transition-colors',
+            lang === l.id ? 'bg-signal-liquid/15 text-signal-liquid' : 'text-plant-400 hover:text-plant-100',
+          )}
+        >
+          {l.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function ThemeToggle() {
+  const [theme, toggle] = useTheme();
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      aria-label={t(theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode')}
+      title={t(theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode')}
+      className="grid h-7 w-7 place-items-center rounded border border-white/[0.08] text-plant-300 transition-colors hover:border-signal-liquid/40 hover:text-signal-liquid"
+    >
+      {theme === 'dark' ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+    </button>
   );
 }
 

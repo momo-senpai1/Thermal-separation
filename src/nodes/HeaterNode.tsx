@@ -11,8 +11,8 @@ export function HeaterNode({ data, selected }: NodeProps<UnitNode>) {
       <div className="flex items-center gap-3">
         {/* ISA heat-exchanger symbol: circle with process coil */}
         <svg viewBox="0 0 48 48" className="h-12 w-12 shrink-0" aria-hidden>
-          <circle cx="24" cy="24" r="17" fill="rgba(249,115,22,0.06)" stroke="#f97316" strokeWidth="1.5" />
-          <path d="M4 24h8l4-8 5 16 5-16 5 16 4-8h9" stroke="#fdba74" strokeWidth="1.3" fill="none" />
+          <circle cx="24" cy="24" r="17" fill="rgb(var(--sig-heat)/0.06)" stroke="rgb(var(--sig-heat))" strokeWidth="1.5" />
+          <path d="M4 24h8l4-8 5 16 5-16 5 16 4-8h9" stroke="rgb(var(--sig-heat))" strokeWidth="1.3" fill="none" />
         </svg>
         <div className="min-w-[96px] flex-1">
           <Readout label="Q" value={fmt(q, 0)} unit="kW" tone="heat" />

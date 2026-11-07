@@ -3,6 +3,73 @@
 @tailwind utilities;
 
 @layer base {
+  /* ---------- theme tokens (RGB triplets for Tailwind; full colours for SVG) ---------- */
+  :root {
+    color-scheme: dark;
+    --plant-950: 6 9 13;
+    --plant-900: 10 15 21;
+    --plant-850: 14 20 28;
+    --plant-800: 18 26 36;
+    --plant-700: 27 38 51;
+    --plant-600: 39 53 70;
+    --plant-500: 58 75 96;
+    --plant-400: 92 112 137;
+    --plant-300: 135 152 173;
+    --plant-200: 182 194 209;
+    --plant-100: 219 227 236;
+    --white: 255 255 255;
+    --sig-liquid: 45 212 191;
+    --sig-vapor: 251 191 36;
+    --sig-heat: 249 115 22;
+    --sig-alarm: 244 63 94;
+    --sig-ok: 74 222 128;
+    --sig-two: 163 230 53;
+    --viz-surface: #0a0f15;
+    --viz-grid: #1b2633;
+    --viz-axis: #273546;
+    --viz-text: #dbe3ec;
+    --viz-text-muted: #8798ad;
+    --viz-text-faint: #5c7089;
+    --viz-eq: #3987e5;
+    --viz-eq-rgb: 57 135 229;
+    --viz-op: #d95926;
+    --viz-q: #199e70;
+    --viz-steps: #b6c2d1;
+    --viz-diag: #3a4b60;
+  }
+  html.light {
+    color-scheme: light;
+    --plant-950: 243 246 249;
+    --plant-900: 255 255 255;
+    --plant-850: 246 248 251;
+    --plant-800: 236 240 245;
+    --plant-700: 221 228 236;
+    --plant-600: 199 209 221;
+    --plant-500: 138 151 168;
+    --plant-400: 96 111 131;
+    --plant-300: 71 85 105;
+    --plant-200: 44 56 70;
+    --plant-100: 15 23 42;
+    --white: 15 23 42;
+    --sig-liquid: 13 148 136;
+    --sig-vapor: 180 83 9;
+    --sig-heat: 194 65 12;
+    --sig-alarm: 225 29 72;
+    --sig-ok: 22 163 74;
+    --sig-two: 101 163 13;
+    --viz-surface: #ffffff;
+    --viz-grid: #e3e8ef;
+    --viz-axis: #c7d1dd;
+    --viz-text: #0f172a;
+    --viz-text-muted: #475569;
+    --viz-text-faint: #8a97a8;
+    --viz-eq: #2a78d6;
+    --viz-eq-rgb: 42 120 214;
+    --viz-op: #eb6834;
+    --viz-q: #1baf7a;
+    --viz-steps: #334155;
+    --viz-diag: #b8c2cf;
+  }
   :root {
     --background: 215 33% 4%;
     --foreground: 210 30% 90%;
@@ -47,8 +114,8 @@
 .react-flow {
   --xy-background-color: transparent;
   --xy-node-border-radius: 0;
-  --xy-edge-stroke: #3a4b60;
-  --xy-connectionline-stroke: #2dd4bf;
+  --xy-edge-stroke: rgb(var(--plant-500));
+  --xy-connectionline-stroke: rgb(var(--sig-liquid));
   --xy-attribution-background-color: transparent;
 }
 .react-flow__node {
@@ -63,18 +130,18 @@
   width: 10px;
   height: 10px;
   border-radius: 2px;
-  border: 1.5px solid #5c7089;
-  background: #0a0f15;
+  border: 1.5px solid rgb(var(--plant-400));
+  background: rgb(var(--plant-900));
   transition: all 120ms ease;
 }
 .react-flow__handle:hover,
 .react-flow__handle.connectingto {
-  border-color: #2dd4bf;
-  background: #2dd4bf;
-  box-shadow: 0 0 10px #2dd4bf;
+  border-color: rgb(var(--sig-liquid));
+  background: rgb(var(--sig-liquid));
+  box-shadow: 0 0 10px rgb(var(--sig-liquid));
 }
 .react-flow__handle.connectingfrom {
-  border-color: #fbbf24;
+  border-color: rgb(var(--sig-vapor));
 }
 .react-flow__controls {
   @apply glass overflow-hidden !shadow-glass;
@@ -82,11 +149,11 @@
 .react-flow__controls-button {
   background: transparent;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  fill: #8798ad;
+  fill: rgb(var(--plant-300));
 }
 .react-flow__controls-button:hover {
-  background: rgba(45, 212, 191, 0.1);
-  fill: #2dd4bf;
+  background: rgb(var(--sig-liquid) / 0.1);
+  fill: rgb(var(--sig-liquid));
 }
 .react-flow__minimap {
   @apply glass overflow-hidden;
@@ -96,4 +163,9 @@
 }
 .react-flow__edge.selected .stream-pipe {
   filter: drop-shadow(0 0 6px currentColor);
+}
+
+/* lighter elevation on the light theme */
+html.light .glass {
+  box-shadow: 0 0 0 1px rgb(15 23 42 / 0.05), 0 8px 24px -14px rgb(15 23 42 / 0.25);
 }

@@ -14,15 +14,15 @@ import { useFlowsheet } from '@/store/flowsheetStore';
 import type { UnitType } from '@/types/process';
 import { DND_MIME } from './Palette';
 
-const UNIT_TYPES: readonly string[] = ['feed', 'mixer', 'heater', 'distillation', 'batch', 'flash'];
+const UNIT_TYPES: readonly string[] = ['feed', 'mixer', 'splitter', 'heater', 'cooler', 'pump', 'valve', 'distillation', 'batch', 'flash', 'evaporator', 'absorber', 'extractor', 'evaptrain', 'crystallizer', 'dryer'];
 
 const MINIMAP_COLOR: Record<string, string> = {
-  feed: '#2dd4bf',
-  mixer: '#5c7089',
-  heater: '#f97316',
-  distillation: '#2dd4bf',
-  batch: '#fbbf24',
-  flash: '#fbbf24',
+  feed: 'rgb(var(--sig-liquid))',
+  mixer: 'rgb(var(--plant-400))',
+  heater: 'rgb(var(--sig-heat))',
+  distillation: 'rgb(var(--sig-liquid))',
+  batch: 'rgb(var(--sig-vapor))',
+  flash: 'rgb(var(--sig-vapor))',
 };
 
 export function FlowCanvas() {
@@ -69,7 +69,7 @@ export function FlowCanvas() {
         onDrop={onDrop}
         onDragOver={onDragOver}
         defaultEdgeOptions={{ type: 'stream' }}
-        connectionLineStyle={{ stroke: '#2dd4bf', strokeWidth: 1.5, strokeDasharray: '4 4' }}
+        connectionLineStyle={{ stroke: 'rgb(var(--sig-liquid))', strokeWidth: 1.5, strokeDasharray: '4 4' }}
         deleteKeyCode={['Backspace', 'Delete']}
         snapToGrid
         snapGrid={[10, 10]}
@@ -86,9 +86,9 @@ export function FlowCanvas() {
           position="bottom-right"
           pannable
           zoomable
-          bgColor="rgba(6,9,13,0.85)"
-          maskColor="rgba(6,9,13,0.6)"
-          nodeColor={(n) => MINIMAP_COLOR[n.type ?? ''] ?? '#5c7089'}
+          bgColor="rgb(var(--plant-950)/0.85)"
+          maskColor="rgb(var(--plant-950)/0.6)"
+          nodeColor={(n) => MINIMAP_COLOR[n.type ?? ''] ?? 'rgb(var(--plant-400))'}
           nodeBorderRadius={2}
           style={{ width: 160, height: 100 }}
         />
