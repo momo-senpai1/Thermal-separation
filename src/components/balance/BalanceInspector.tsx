@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { PRESET_CURVES, parseTable } from '@/engine/balance/columnMT';
 import { nKey, qKey, QKey, xKey } from '@/engine/balance/solver';
-import type { CurveSpec } from '@/engine/balance/types';
+import { PASS_THROUGH, THERMAL, TWO_OUTLETS, type CurveSpec } from '@/engine/balance/types';
 import { t } from '@/i18n';
 import { cn } from '@/lib/utils';
 import { DEFAULT_COLUMN, useBalance, useBalanceSolution, type BEdge, type BNode } from '@/store/balanceStore';
@@ -158,11 +158,13 @@ function UnitPanel({ n }: { n: BNode }) {
       <Section title={kindLabel(d.kind)}>
         <NameInput value={d.name} onChange={(name) => update(n.id, { name })} />
       </Section>
-      {d.kind === 'exchanger' && (
+      {THERMAL.includes(d.kind) && (
         <Section title="Heat">
-          <SpecInput label={t('Q̇ removed (+ cooling)')} unit="kJ/h" value={d.Q} computed={result.values.get(QKey(n.id))} onChange={(Q) => update(n.id, { Q })} />
+          <SpecInput label={t(d.kind === 'heater' ? 'Q̇ supplied (+ heating)' : 'Q̇ removed (+ cooling)')} unit="kJ/h" value={d.Q} computed={result.values.get(QKey(n.id))} onChange={(Q) => update(n.id, { Q })} />
           <SpecInput label={t('Δh_v of the stream')} unit="kJ/kmol" value={d.dHv} onChange={(dHv) => update(n.id, { dHv })} />
-          <p className="text-[10px] leading-relaxed text-plant-500">{t('Energy balance: ṅ·(q_out − q_in)·Δh_v = Q̇. Removing heat condenses vapour and raises q.')}</p>
+          <p className="text-[10px] leading-relaxed text-plant-500">
+            {t(d.kind === 'heater' ? 'Energy balance: ṅ·(q_in − q_out)·Δh_v = Q̇. Supplying heat evaporates liquid and lowers q.' : 'Energy balance: ṅ·(q_out − q_in)·Δh_v = Q̇. Removing heat condenses vapour and raises q.')}
+          </p>
         </Section>
       )}
       {d.kind === 'column' && (
@@ -202,7 +204,10 @@ function UnitPanel({ n }: { n: BNode }) {
           <p className="text-[10px] leading-relaxed text-plant-500">{t('Top outlet = distillate, bottom outlet = bottoms; every inlet is a feed.')}</p>
         </Section>
       )}
-      {(d.kind === 'splitter' || d.kind === 'exchanger') && (
+      {TWO_OUTLETS.includes(d.kind) && d.kind !== 'column' && (
+        <p className="px-4 pt-3 text-[10px] leading-relaxed text-plant-500">{t('Balance block: total and component balances around the unit. Enter the outlet compositions the exercise gives.')}</p>
+      )}
+      {(d.kind === 'splitter' || PASS_THROUGH.includes(d.kind)) && (
         <p className="px-4 py-3 text-[10px] leading-relaxed text-plant-500">{t('All outlets have the composition of the inlet.')}</p>
       )}
     </>

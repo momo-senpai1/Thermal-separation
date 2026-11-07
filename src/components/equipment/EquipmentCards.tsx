@@ -54,9 +54,6 @@ export function EquipmentPanel({ topic }: { topic: Topic }) {
     <section className="space-y-2">
       <div className="flex items-baseline justify-between px-1">
         <p className="tag text-plant-400">{tr('Equipment')} · {tr(TOPICS.find((t) => t.id === topic)!.label)}</p>
-        <button type="button" onClick={() => navigate('equipment', { topic })} className="text-[11px] text-signal-liquid hover:underline">
-          {tr('Equipment library')} →
-        </button>
       </div>
       <div className="grid gap-2 md:grid-cols-2 2xl:grid-cols-3">
         {list.map((e) => (

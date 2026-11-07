@@ -36,14 +36,43 @@ export function ModeSwitch() {
   );
 }
 
-const ITEMS: { kind: BUnitKind; desc: string }[] = [
-  { kind: 'source', desc: 'Stream entering the system' },
-  { kind: 'sink', desc: 'Stream leaving the system' },
-  { kind: 'column', desc: 'Feeds in · top and bottom out' },
-  { kind: 'mixer', desc: 'Several in · one out' },
-  { kind: 'splitter', desc: 'Same composition in all outlets' },
-  { kind: 'exchanger', desc: 'Q̇ changes q: ṅ·Δq·Δh_v = Q̇' },
-  { kind: 'unit', desc: 'Only the balances' },
+const GROUPS: { title: string; items: { kind: BUnitKind; desc: string }[] }[] = [
+  {
+    title: 'Streams',
+    items: [
+      { kind: 'source', desc: 'Stream entering the system' },
+      { kind: 'sink', desc: 'Stream leaving the system' },
+      { kind: 'mixer', desc: 'Several in · one out' },
+      { kind: 'splitter', desc: 'Same composition in all outlets' },
+    ],
+  },
+  {
+    title: 'Heat & pressure',
+    items: [
+      { kind: 'heater', desc: 'Q̇ supplied evaporates: q falls' },
+      { kind: 'cooler', desc: 'Q̇ removed condenses: q rises' },
+      { kind: 'pump', desc: 'Flow and composition unchanged' },
+      { kind: 'valve', desc: 'Flow and composition unchanged' },
+    ],
+  },
+  {
+    title: 'Separation',
+    items: [
+      { kind: 'column', desc: 'Feeds in · distillate and bottoms · McCabe–Thiele' },
+      { kind: 'flash', desc: 'Vapour and liquid out' },
+      { kind: 'evaporator', desc: 'Vapour and concentrate out' },
+    ],
+  },
+  {
+    title: 'Process blocks',
+    items: [
+      { kind: 'absorber', desc: 'Gas and solvent in · gas and liquid out' },
+      { kind: 'extractor', desc: 'Feed and solvent in · extract and raffinate out' },
+      { kind: 'crystallizer', desc: 'Mother liquor and crystals out' },
+      { kind: 'dryer', desc: 'Wet solid and air in · exhaust and dry solid out' },
+      { kind: 'unit', desc: 'Only the balances' },
+    ],
+  },
 ];
 
 export function BalancePalette() {
@@ -92,26 +121,33 @@ export function BalancePalette() {
         <p className="tag text-plant-400">{t('Units')}</p>
         <p className="mt-0.5 text-[10px] text-plant-500">{t('Drag onto the flowsheet, then connect the handles')}</p>
       </div>
-      <ul className="space-y-0.5 p-2">
-        {ITEMS.map((it) => (
-          <li
-            key={it.kind}
-            draggable
-            onDragStart={(e) => onDragStart(e, it.kind)}
-            className="group flex cursor-grab items-center gap-2.5 rounded-md border border-transparent px-2 py-1.5 transition-colors hover:border-white/[0.06] hover:bg-white/[0.03] active:cursor-grabbing"
-          >
-            <span className="grid h-8 w-8 place-items-center rounded border border-white/[0.06] bg-plant-950/70">
-              <svg viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-plant-300 stroke-[1.4] transition-colors group-hover:stroke-signal-liquid">
-                {KIND_ICON[it.kind]}
-              </svg>
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-xs text-plant-200">{kindLabel(it.kind)}</span>
-              <span className="block truncate text-[10px] text-plant-500">{t(it.desc)}</span>
-            </span>
-          </li>
+      <div className="space-y-2 p-2">
+        {GROUPS.map((g) => (
+          <div key={g.title}>
+            <p className="tag px-2 pb-1 pt-1 text-plant-500">{t(g.title)}</p>
+            <ul className="space-y-0.5">
+              {g.items.map((it) => (
+                <li
+                  key={it.kind}
+                  draggable
+                  onDragStart={(e) => onDragStart(e, it.kind)}
+                  className="group flex cursor-grab items-center gap-2.5 rounded-md border border-transparent px-2 py-1.5 transition-colors hover:border-white/[0.06] hover:bg-white/[0.03] active:cursor-grabbing"
+                >
+                  <span className="grid h-8 w-8 place-items-center rounded border border-white/[0.06] bg-plant-950/70">
+                    <svg viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-plant-300 stroke-[1.4] transition-colors group-hover:stroke-signal-liquid">
+                      {KIND_ICON[it.kind]}
+                    </svg>
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-xs text-plant-200">{kindLabel(it.kind)}</span>
+                    <span className="block truncate text-[10px] text-plant-500">{t(it.desc)}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
         ))}
-      </ul>
+      </div>
       <div className="mt-auto space-y-1.5 border-t border-white/[0.05] p-3">
         <p className="tag text-plant-400">{t('Examples')}</p>
         <button

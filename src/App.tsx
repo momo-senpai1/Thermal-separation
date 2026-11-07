@@ -21,7 +21,6 @@ const AbsorptionPage = lazy(() => import('@/pages/AbsorptionPage'));
 const EvaporationPage = lazy(() => import('@/pages/EvaporationPage'));
 const CrystallizationPage = lazy(() => import('@/pages/CrystallizationPage'));
 const DryingPage = lazy(() => import('@/pages/DryingPage'));
-const EquipmentPage = lazy(() => import('@/pages/EquipmentPage'));
 
 export default function App() {
   const { route, params } = useRoute();
@@ -66,8 +65,6 @@ export default function App() {
                 <CrystallizationPage />
               ) : route === 'drying' ? (
                 <DryingPage />
-              ) : route === 'equipment' ? (
-                <EquipmentPage params={params} />
               ) : (
                 <DistillationLinesPage />
               )}

@@ -101,3 +101,37 @@ describe('McCabe–Thiele with constant α', () => {
     expect(Math.abs(t.N - pc.N)).toBeLessThan(1);
   });
 });
+
+describe('balance solver — flowsheet equipment', () => {
+  const chain = (kind: 'heater' | 'cooler' | 'pump', Q: number | null, qIn: number): BProblem => ({
+    components: ['A', 'B'],
+    units: [
+      { id: 's', kind: 'source', name: 'S', order: 0 },
+      { id: 'u', kind, name: 'U', Q, dHv: 30000, order: 1 },
+      { id: 'f', kind: 'flash', name: 'V', order: 2 },
+      { id: 'pv', kind: 'sink', name: 'PV', order: 3 },
+      { id: 'pl', kind: 'sink', name: 'PL', order: 3 },
+    ],
+    streams: [
+      { id: 'a', name: 'a', from: 's', fromPort: 'out', to: 'u', n: 10, x: [0.5, 0.5], q: qIn },
+      { id: 'b', name: 'b', from: 'u', fromPort: 'out', to: 'f', n: null, x: [null, null], q: null },
+      { id: 'v', name: 'v', from: 'f', fromPort: 'top', to: 'pv', n: null, x: [0.7, null], q: null },
+      { id: 'l', name: 'l', from: 'f', fromPort: 'bottom', to: 'pl', n: null, x: [0.3, null], q: null },
+    ],
+  });
+  it('heater: supplied heat lowers q', () => {
+    const r = solveBalance(chain('heater', 150000, 1));
+    expect(r.values.get(qKey('b'))).toBeCloseTo(0.5, 12);
+  });
+  it('cooler: removed heat raises q', () => {
+    const r = solveBalance(chain('cooler', 150000, 0));
+    expect(r.values.get(qKey('b'))).toBeCloseTo(0.5, 12);
+  });
+  it('pump passes flow and composition; flash splits by the lever rule', () => {
+    const r = solveBalance(chain('pump', null, 1));
+    expect(r.values.get(nKey('b'))).toBe(10);
+    expect(r.values.get(xKey('b', 0))).toBe(0.5);
+    expect(r.values.get(nKey('v'))).toBeCloseTo(5, 12);
+    expect(r.missing).toEqual([]);
+  });
+});

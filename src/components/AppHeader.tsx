@@ -25,7 +25,6 @@ const NAV: (NavItem | NavGroup)[] = [
   { route: 'evaporation', label: 'Evaporation' },
   { route: 'crystallization', label: 'Crystallization' },
   { route: 'drying', label: 'Drying' },
-  { route: 'equipment', label: 'Equipment' },
 ];
 
 const tab = (active: boolean) =>

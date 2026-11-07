@@ -280,8 +280,9 @@ export default function McCabeThielePage({ params }: { params: URLSearchParams }
           </ul>
         </Panel>
       </div>
-      <div className="pt-2">
+      <div className="space-y-2 pt-2">
         <EquipmentPanel topic="distillation" />
+        <EquipmentPanel topic="auxiliary" />
       </div>
     </div>
   );

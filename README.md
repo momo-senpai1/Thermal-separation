@@ -65,7 +65,6 @@ The header switches between modules (hash routes, so links work on static hostin
 | `#/evaporation` | Single/multiple-effect evaporation, steam economy, MVR |
 | `#/crystallization` | Solubility, cooling/evaporative yield, MSMPR crystal size distribution |
 | `#/drying` | Psychrometrics, drying curves and time, continuous dryer air/heat |
-| `#/equipment` | Equipment library — 32 items across all topics, linked to the calculators |
 
 Planned: reactive extraction, adsorption.
 
@@ -84,6 +83,11 @@ curve (tangent-pinch R_min, total-reflux N_min, azeotrope limit). A **flash
 drum** unit (heat duty + drum pressure) is available in the palette.
 
 ### Flowsheet equipment
+
+The equipment cards (schematic, use, limits, design parameters) appear at the
+bottom of each topic page. Auxiliary equipment such as flash drums, demisters,
+ejectors and exchangers appears under McCabe–Thiele.
+
 
 Drag any unit from the palette onto the canvas and wire it up:
 
@@ -104,9 +108,17 @@ Drag any unit from the palette onto the canvas and wire it up:
 Switch the flowsheet from **Simulation** to **Balance task** to work an
 exercise the way it is solved on paper:
 
-1. Draw the process: feeds, products, columns, mixers, splitters, heat
-   exchangers or generic black-box units, joined by streams. A column's top
-   outlet is the distillate, its bottom outlet the bottoms.
+1. Draw the process with the same equipment as the simulator, joined by streams:
+   - feed, product, mixer, splitter (same composition in every outlet);
+   - heater and cooler: energy balance on q with Q̇ and Δh_v;
+   - pump and valve: flow and composition unchanged;
+   - column, flash drum, evaporator, absorber, extraction column, crystallizer
+     and dryer: two outlets (top / bottom, e.g. distillate / bottoms,
+     vapour / liquid, extract / raffinate), balances around the unit;
+   - a generic black box.
+
+   The batch still is left out, because a batch process has no steady-state
+   balance.
 2. Enter what the exercise gives for each stream: ṅ, mole fractions, q. Leave
    unknowns empty.
 3. The **solution path** solves the problem step by step, typeset with KaTeX.
