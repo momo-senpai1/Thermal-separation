@@ -1,7 +1,17 @@
 import { useEffect, useState } from 'react';
 
-export type Route = 'flowsheet' | 'mccabe-thiele' | 'batch' | 'distillation-lines' | 'extraction';
-const ROUTES: readonly Route[] = ['flowsheet', 'mccabe-thiele', 'batch', 'distillation-lines', 'extraction'];
+export type Route =
+  | 'flowsheet'
+  | 'mccabe-thiele'
+  | 'batch'
+  | 'distillation-lines'
+  | 'extraction'
+  | 'absorption'
+  | 'evaporation'
+  | 'crystallization'
+  | 'drying'
+  | 'equipment';
+const ROUTES: readonly Route[] = ['flowsheet', 'mccabe-thiele', 'batch', 'distillation-lines', 'extraction', 'absorption', 'evaporation', 'crystallization', 'drying', 'equipment'];
 
 function parse(): { route: Route; params: URLSearchParams } {
   const raw = window.location.hash.replace(/^#\/?/, '');

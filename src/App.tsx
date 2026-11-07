@@ -11,6 +11,11 @@ const McCabeThielePage = lazy(() => import('@/pages/McCabeThielePage'));
 const BatchPage = lazy(() => import('@/pages/BatchPage'));
 const DistillationLinesPage = lazy(() => import('@/pages/DistillationLinesPage'));
 const ExtractionPage = lazy(() => import('@/pages/ExtractionPage'));
+const AbsorptionPage = lazy(() => import('@/pages/AbsorptionPage'));
+const EvaporationPage = lazy(() => import('@/pages/EvaporationPage'));
+const CrystallizationPage = lazy(() => import('@/pages/CrystallizationPage'));
+const DryingPage = lazy(() => import('@/pages/DryingPage'));
+const EquipmentPage = lazy(() => import('@/pages/EquipmentPage'));
 
 export default function App() {
   const { route, params } = useRoute();
@@ -28,13 +33,23 @@ export default function App() {
           </main>
         ) : (
           <Suspense fallback={<div className="glass flex-1 animate-pulse" aria-busy="true" />}>
-            <main className="relative min-h-0 flex-1 overflow-y-auto">
+            <main key={route} className="relative min-h-0 flex-1 overflow-y-auto">
               {route === 'mccabe-thiele' ? (
                 <McCabeThielePage params={params} />
               ) : route === 'batch' ? (
                 <BatchPage params={params} />
               ) : route === 'extraction' ? (
                 <ExtractionPage params={params} />
+              ) : route === 'absorption' ? (
+                <AbsorptionPage params={params} />
+              ) : route === 'evaporation' ? (
+                <EvaporationPage />
+              ) : route === 'crystallization' ? (
+                <CrystallizationPage />
+              ) : route === 'drying' ? (
+                <DryingPage />
+              ) : route === 'equipment' ? (
+                <EquipmentPage params={params} />
               ) : (
                 <DistillationLinesPage />
               )}

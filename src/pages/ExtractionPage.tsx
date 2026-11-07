@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { EquipmentPanel } from '@/components/equipment/EquipmentCards';
 import { HunterNashDiagram, type HNLayers } from '@/components/extraction/HunterNashDiagram';
 import { fmtL, LoadingChart, LoadingLegend, type LoadingLayers } from '@/components/extraction/LoadingChart';
 import { VIZ } from '@/components/analysis/vizTokens';
@@ -308,6 +309,9 @@ export default function ExtractionPage({ params }: { params: URLSearchParams }) 
             </>
           )}
         </div>
+      </div>
+      <div className="pt-2">
+        <EquipmentPanel topic="extraction" />
       </div>
     </div>
   );
