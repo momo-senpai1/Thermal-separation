@@ -9,9 +9,8 @@ export type Route =
   | 'absorption'
   | 'evaporation'
   | 'crystallization'
-  | 'drying'
-  | 'equipment';
-const ROUTES: readonly Route[] = ['flowsheet', 'mccabe-thiele', 'batch', 'distillation-lines', 'extraction', 'absorption', 'evaporation', 'crystallization', 'drying', 'equipment'];
+  | 'drying';
+const ROUTES: readonly Route[] = ['flowsheet', 'mccabe-thiele', 'batch', 'distillation-lines', 'extraction', 'absorption', 'evaporation', 'crystallization', 'drying'];
 
 function parse(): { route: Route; params: URLSearchParams } {
   const raw = window.location.hash.replace(/^#\/?/, '');

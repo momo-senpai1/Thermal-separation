@@ -25,7 +25,7 @@ export function thfPressureSwing(): ExampleLayout {
         name: 'Kolonne 2 (20 bar)',
         column: { mt: true, v: 4, condenser: 'partial', key: 0, curve: { kind: 'table', preset: 'vr02-20bar', points: PRESET_CURVES['vr02-20bar']!.points } },
       },
-      { id: 'WT', kind: 'exchanger', name: 'Wärmeverlust', Q: 16500, dHv: 90 },
+      { id: 'WT', kind: 'cooler', name: 'Wärmeverlust', Q: 16500, dHv: 90 },
       {
         id: 'K3',
         kind: 'column',

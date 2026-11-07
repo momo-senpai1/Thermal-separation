@@ -1,91 +1,33 @@
 import type { DragEvent } from 'react';
 import type { UnitType } from '@/types/process';
 import { MaterialPicker } from './MaterialPicker';
+import { UNIT_ICONS } from './unitIcons';
 import { t } from '@/i18n';
 import { ModeSwitch } from '@/components/balance/BalancePalette';
 
 export const DND_MIME = 'application/x-thermal-unit';
 
 type Item = { type: UnitType; tag: string; name: string; desc: string; icon: JSX.Element };
-const BASE: Item[] = [
-  {
-    type: 'feed',
-    tag: 'F',
-    name: 'Feed',
-    desc: 'Boundary stream',
-    icon: <path d="M3 5h11l6 7-6 7H3z" />,
-  },
-  {
-    type: 'mixer',
-    tag: 'M',
-    name: 'Mixer',
-    desc: '2 → 1 adiabatic',
-    icon: <path d="M5 4l14 8-14 8z" />,
-  },
-  {
-    type: 'heater',
-    tag: 'E',
-    name: 'Heater',
-    desc: 'Duty Q [kW]',
-    icon: (
-      <>
-        <circle cx="12" cy="12" r="8" />
-        <path d="M2 12h4l2-4 3 8 3-8 3 8 2-4h3" />
-      </>
-    ),
-  },
-  {
-    type: 'distillation',
-    tag: 'T',
-    name: 'Column',
-    desc: 'Binary rectification',
-    icon: (
-      <>
-        <rect x="8" y="2" width="8" height="20" rx="4" />
-        <path d="M8 8h5M16 12h-5M8 16h5" />
-      </>
-    ),
-  },
-  {
-    type: 'flash',
-    tag: 'V',
-    name: 'Flash drum',
-    desc: 'Q, P → vapour + liquid',
-    icon: (
-      <>
-        <rect x="8" y="3" width="8" height="18" rx="4" />
-        <path d="M8 9h8M3 13h5M12 3V1M12 21v2" />
-      </>
-    ),
-  },
-  {
-    type: 'batch',
-    tag: 'B',
-    name: 'Batch still',
-    desc: 'Charge → distillate + residue',
-    icon: (
-      <>
-        <path d="M4 13h12v4a6 5 0 0 1-12 0z" />
-        <path d="M10 13V4h8v4M18 11v3" />
-      </>
-    ),
-  },
+const ITEMS: Item[] = [
+  { type: 'feed', tag: 'F', name: 'Feed', desc: 'Boundary stream', icon: UNIT_ICONS.feed },
+  { type: 'mixer', tag: 'M', name: 'Mixer', desc: '2 → 1 adiabatic', icon: UNIT_ICONS.mixer },
+  { type: 'heater', tag: 'E', name: 'Heater', desc: 'Duty Q [kW]', icon: UNIT_ICONS.heater },
+  { type: 'distillation', tag: 'T', name: 'Column', desc: 'Binary rectification', icon: UNIT_ICONS.distillation },
+  { type: 'flash', tag: 'V', name: 'Flash drum', desc: 'Q, P → vapour + liquid', icon: UNIT_ICONS.flash },
+  { type: 'batch', tag: 'B', name: 'Batch still', desc: 'Charge → distillate + residue', icon: UNIT_ICONS.batch },
+  { type: 'splitter', tag: 'S', name: 'Splitter', desc: '1 → 2 by fraction', icon: UNIT_ICONS.splitter },
+  { type: 'cooler', tag: 'E', name: 'Cooler / condenser', desc: 'Duty Q < 0', icon: UNIT_ICONS.cooler },
+  { type: 'pump', tag: 'P', name: 'Pump', desc: 'Raise pressure', icon: UNIT_ICONS.pump },
+  { type: 'valve', tag: 'FV', name: 'Valve', desc: 'Let down · flash', icon: UNIT_ICONS.valve },
+  { type: 'evaporator', tag: 'EV', name: 'Evaporator', desc: 'Set V/F → duty', icon: UNIT_ICONS.evaporator },
+  { type: 'absorber', tag: 'C', name: 'Absorber / stripper', desc: 'Gas–liquid block', icon: UNIT_ICONS.absorber },
+  { type: 'extractor', tag: 'X', name: 'Extraction column', desc: 'Liquid–liquid block', icon: UNIT_ICONS.extractor },
+  { type: 'evaptrain', tag: 'EV', name: 'Multi-effect evaporator', desc: 'Concentration block', icon: UNIT_ICONS.evaptrain },
+  { type: 'crystallizer', tag: 'CR', name: 'Crystallizer', desc: 'Solid–liquid block', icon: UNIT_ICONS.crystallizer },
+  { type: 'dryer', tag: 'D', name: 'Dryer', desc: 'Moist solid block', icon: UNIT_ICONS.dryer },
 ];
 
-const EXTRA: Item[] = [
-  { type: 'splitter', tag: 'S', name: 'Splitter', desc: '1 → 2 by fraction', icon: <path d="M2 12h8l10-7M10 12l10 7" /> },
-  { type: 'cooler', tag: 'E', name: 'Cooler / condenser', desc: 'Duty Q < 0', icon: <><circle cx="12" cy="12" r="8" /><path d="M2 12h4l2-4 3 8 3-8 3 8 2-4h3" /></> },
-  { type: 'pump', tag: 'P', name: 'Pump', desc: 'Raise pressure', icon: <><circle cx="11" cy="13" r="7" /><path d="M11 6h9v3M8 13l6-3.5v7z" /></> },
-  { type: 'valve', tag: 'FV', name: 'Valve', desc: 'Let down · flash', icon: <path d="M3 7l18 10V7L3 17z" /> },
-  { type: 'evaporator', tag: 'EV', name: 'Evaporator', desc: 'Set V/F → duty', icon: <><rect x="7" y="2" width="10" height="9" rx="4" /><rect x="8" y="11" width="8" height="10" /></> },
-  { type: 'absorber', tag: 'C', name: 'Absorber / stripper', desc: 'Gas–liquid block', icon: <><rect x="8" y="2" width="8" height="20" rx="4" /><path d="M9 8l6 6M15 8l-6 6" /></> },
-  { type: 'extractor', tag: 'X', name: 'Extraction column', desc: 'Liquid–liquid block', icon: <><rect x="8" y="2" width="8" height="20" rx="4" /><path d="M12 2v20M9 8h6M9 13h6M9 18h6" /></> },
-  { type: 'evaptrain', tag: 'EV', name: 'Multi-effect evaporator', desc: 'Concentration block', icon: <><rect x="2" y="6" width="6" height="12" rx="2" /><rect x="9" y="6" width="6" height="12" rx="2" /><rect x="16" y="6" width="6" height="12" rx="2" /></> },
-  { type: 'crystallizer', tag: 'CR', name: 'Crystallizer', desc: 'Solid–liquid block', icon: <><path d="M5 4h14v11l-7 6-7-6z" /><path d="M9 12h2v2H9zM13 10h2v2h-2z" /></> },
-  { type: 'dryer', tag: 'D', name: 'Dryer', desc: 'Moist solid block', icon: <><path d="M3 8l18 3v5L3 13z" /><path d="M8 9v5M13 10v5" /></> },
-];
-
-const byType = (t: UnitType) => [...BASE, ...EXTRA].find((i) => i.type === t)!;
+const byType = (t: UnitType) => ITEMS.find((i) => i.type === t)!;
 const GROUPS: { title: string; types: UnitType[] }[] = [
   { title: 'Streams', types: ['feed', 'mixer', 'splitter'] },
   { title: 'Heat & pressure', types: ['heater', 'cooler', 'pump', 'valve'] },

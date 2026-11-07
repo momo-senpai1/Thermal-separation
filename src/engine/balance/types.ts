@@ -5,7 +5,32 @@
  * unknowns from the mass and energy balances the way one would by hand.
  */
 
-export type BUnitKind = 'source' | 'sink' | 'column' | 'mixer' | 'splitter' | 'exchanger' | 'unit';
+export type BUnitKind =
+  | 'source'
+  | 'sink'
+  | 'mixer'
+  | 'splitter'
+  | 'heater'
+  | 'cooler'
+  /** legacy alias of cooler (heat removed) */
+  | 'exchanger'
+  | 'pump'
+  | 'valve'
+  | 'column'
+  | 'flash'
+  | 'evaporator'
+  | 'absorber'
+  | 'extractor'
+  | 'crystallizer'
+  | 'dryer'
+  | 'unit';
+
+/** One inlet, one outlet, composition unchanged. */
+export const PASS_THROUGH: readonly BUnitKind[] = ['heater', 'cooler', 'exchanger', 'pump', 'valve'];
+/** Heat exchangers with an energy balance on q. */
+export const THERMAL: readonly BUnitKind[] = ['heater', 'cooler', 'exchanger'];
+/** Units with a top and a bottom outlet. */
+export const TWO_OUTLETS: readonly BUnitKind[] = ['column', 'flash', 'evaporator', 'absorber', 'extractor', 'crystallizer', 'dryer'];
 export type BPort = 'out' | 'top' | 'bottom';
 
 export type CurveSpec =
@@ -28,7 +53,7 @@ export interface BUnit {
   id: string;
   kind: BUnitKind;
   name: string;
-  /** exchanger: heat removed from the stream [kJ/h] (positive = cooling/condensing), null = unknown */
+  /** heater: heat supplied, cooler/exchanger: heat removed [kJ/h]; null = unknown */
   Q?: number | null;
   /** exchanger: latent heat of the stream [kJ/kmol] */
   dHv?: number | null;

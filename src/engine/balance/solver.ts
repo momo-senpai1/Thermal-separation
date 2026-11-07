@@ -11,7 +11,7 @@
  * one unknown, then 2×2 and 3×3 systems. Each such move is recorded as a step.
  */
 
-import type { BalanceResult, BProblem, BStream, BUnit, Check, Equation, Step, Term, VarKey } from './types';
+import { PASS_THROUGH, THERMAL, type BalanceResult, type BProblem, type BStream, type BUnit, type Check, type Equation, type Step, type Term, type VarKey } from './types';
 
 export const nKey = (s: string) => `n:${s}`;
 export const xKey = (s: string, i: number) => `x:${s}:${i}`;
@@ -91,7 +91,7 @@ export function buildEquations(p: BProblem): Equation[] {
   }
 
   for (const u of p.units) {
-    if (u.kind !== 'splitter' && u.kind !== 'exchanger') continue;
+    if (u.kind !== 'splitter' && !PASS_THROUGH.includes(u.kind)) continue;
     const ins = p.streams.filter((s) => s.to === u.id);
     const outs = p.streams.filter((s) => s.from === u.id);
     if (ins.length !== 1) continue;
@@ -112,16 +112,18 @@ export function buildEquations(p: BProblem): Equation[] {
         });
       }
     }
-    if (u.kind === 'exchanger' && outs.length === 1) {
+    if (THERMAL.includes(u.kind) && outs.length === 1) {
       const b = outs[0]!;
-      // ṅ_in·q_out·Δh_v − ṅ_in·q_in·Δh_v − Q̇ = 0  (Q̇ removed → liquid formed)
+      // cooler: ṅ·q_out·Δh_v = ṅ·q_in·Δh_v + Q̇ (heat removed → liquid formed)
+      // heater: ṅ·q_in·Δh_v = ṅ·q_out·Δh_v + Q̇ (heat supplied → vapour formed)
+      const s = u.kind === 'heater' ? -1 : 1;
       eqs.push({
         id: `E:${u.id}`,
         kind: 'energy',
         scope: [u.id],
         terms: [
-          { c: 1, f: [nKey(a.id), qKey(b.id), HKey(u.id)] },
-          { c: -1, f: [nKey(a.id), qKey(a.id), HKey(u.id)] },
+          { c: s, f: [nKey(a.id), qKey(b.id), HKey(u.id)] },
+          { c: -s, f: [nKey(a.id), qKey(a.id), HKey(u.id)] },
           { c: -1, f: [QKey(u.id)] },
         ],
         k: 0,
@@ -141,7 +143,7 @@ export function givenValues(p: BProblem): Map<VarKey, number | null> {
   }
   // q and Q only matter where an energy balance uses them
   for (const u of p.units) {
-    if (u.kind !== 'exchanger') continue;
+    if (!THERMAL.includes(u.kind)) continue;
     m.set(QKey(u.id), u.Q ?? null);
     m.set(HKey(u.id), u.dHv ?? null);
     for (const s of p.streams) if (s.from === u.id || s.to === u.id) m.set(qKey(s.id), s.q);

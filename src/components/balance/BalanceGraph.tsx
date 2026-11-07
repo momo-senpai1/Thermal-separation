@@ -17,42 +17,64 @@ import {
 import { useCallback, type DragEvent } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { nKey, xKey } from '@/engine/balance/solver';
-import type { BUnitKind } from '@/engine/balance/types';
+import { THERMAL, TWO_OUTLETS, type BUnitKind } from '@/engine/balance/types';
 import { t } from '@/i18n';
 import { cn } from '@/lib/utils';
 import { useBalance, useBalanceSolution, type BEdge, type BNode } from '@/store/balanceStore';
+import { UNIT_ICONS } from '@/components/unitIcons';
 import { num } from './texFormat';
 
 export const BALANCE_DND = 'application/x-balance-unit';
 
 export const KIND_ICON: Record<BUnitKind, JSX.Element> = {
-  source: <path d="M3 6h11l6 6-6 6H3z" />,
-  sink: <path d="M4 6h11l6 6-6 6H4zM9 12h6" />,
-  column: (
-    <>
-      <rect x="8" y="2" width="8" height="20" rx="4" />
-      <path d="M8 8h5M16 12h-5M8 16h5" />
-    </>
-  ),
-  mixer: <path d="M3 5l9 7-9 7M12 12h9" />,
-  splitter: <path d="M2 12h9l9-7M11 12l9 7" />,
-  exchanger: (
-    <>
-      <circle cx="12" cy="12" r="8" />
-      <path d="M4 12h3l2-4 3 8 3-8 2 4h3" />
-    </>
-  ),
-  unit: <rect x="4" y="5" width="16" height="14" rx="2" />,
+  source: UNIT_ICONS.feed,
+  sink: UNIT_ICONS.product,
+  mixer: UNIT_ICONS.mixer,
+  splitter: UNIT_ICONS.splitter,
+  heater: UNIT_ICONS.heater,
+  cooler: UNIT_ICONS.cooler,
+  exchanger: UNIT_ICONS.cooler,
+  pump: UNIT_ICONS.pump,
+  valve: UNIT_ICONS.valve,
+  column: UNIT_ICONS.distillation,
+  flash: UNIT_ICONS.flash,
+  evaporator: UNIT_ICONS.evaporator,
+  absorber: UNIT_ICONS.absorber,
+  extractor: UNIT_ICONS.extractor,
+  crystallizer: UNIT_ICONS.crystallizer,
+  dryer: UNIT_ICONS.dryer,
+  unit: UNIT_ICONS.unit,
 };
 
 const KIND_LABEL: Record<BUnitKind, string> = {
   source: 'Feed',
   sink: 'Product',
-  column: 'Column',
   mixer: 'Mixer',
   splitter: 'Splitter',
-  exchanger: 'Heat exchanger',
+  heater: 'Heater',
+  cooler: 'Cooler / condenser',
+  exchanger: 'Cooler / condenser',
+  pump: 'Pump',
+  valve: 'Valve',
+  column: 'Column',
+  flash: 'Flash drum',
+  evaporator: 'Evaporator',
+  absorber: 'Absorber / stripper',
+  extractor: 'Extraction column',
+  crystallizer: 'Crystallizer',
+  dryer: 'Dryer',
   unit: 'Apparatus (black box)',
+};
+
+/** Names of the top / bottom outlets per unit. */
+export const PORT_LABELS: Partial<Record<BUnitKind, [string, string]>> = {
+  column: ['distillate', 'bottoms'],
+  flash: ['vapour', 'liquid'],
+  evaporator: ['vapour', 'concentrate'],
+  absorber: ['gas out', 'liquid out'],
+  extractor: ['extract', 'raffinate'],
+  crystallizer: ['mother liquor', 'crystals'],
+  dryer: ['exhaust air', 'dry solid'],
 };
 export const kindLabel = (k: BUnitKind) => t(KIND_LABEL[k]);
 
@@ -60,12 +82,14 @@ function BalanceNodeView({ id, data, selected }: NodeProps<BNode>) {
   const { columns } = useBalanceSolution();
   const col = columns.find((c) => c.unitId === id);
   const k = data.kind;
+  const two = TWO_OUTLETS.includes(k);
   const tall = k === 'column';
+  const ports = PORT_LABELS[k];
   return (
     <div
       className={cn(
         'glass relative flex min-w-[130px] flex-col items-center gap-1 px-3 py-2 text-center transition-shadow',
-        tall && 'min-h-[150px] justify-center',
+        tall ? 'min-h-[150px] justify-center' : two && 'min-h-[110px] justify-center',
         selected && 'shadow-glow',
       )}
     >
@@ -79,16 +103,16 @@ function BalanceNodeView({ id, data, selected }: NodeProps<BNode>) {
           {col?.result?.ok ? `N = ${num(col.result.N, 2)}` : 'N = ?'} · v = {num(data.column.v, 2)}
         </span>
       )}
-      {k === 'exchanger' && (
+      {THERMAL.includes(k) && (
         <span className="font-mono text-[10px] text-signal-heat">Q̇ = {data.Q === null || data.Q === undefined ? '?' : `${num(data.Q, 0)} kJ/h`}</span>
       )}
       {k !== 'source' && <Handle type="target" position={Position.Left} id="in" />}
-      {k === 'column' ? (
+      {two ? (
         <>
           <Handle type="source" position={Position.Right} id="top" style={{ top: '18%' }} />
           <Handle type="source" position={Position.Right} id="bottom" style={{ top: '82%' }} />
-          <span className="pointer-events-none absolute right-2 top-[11%] font-mono text-[8px] text-plant-500">{t('top')}</span>
-          <span className="pointer-events-none absolute bottom-[11%] right-2 font-mono text-[8px] text-plant-500">{t('bottom')}</span>
+          <span className="pointer-events-none absolute right-2 top-[6%] font-mono text-[8px] text-plant-500">{t(ports?.[0] ?? 'top')}</span>
+          <span className="pointer-events-none absolute bottom-[6%] right-2 font-mono text-[8px] text-plant-500">{t(ports?.[1] ?? 'bottom')}</span>
         </>
       ) : (
         k !== 'sink' && <Handle type="source" position={Position.Right} id="out" />
@@ -139,7 +163,7 @@ function BalanceEdgeView(props: EdgeProps<BEdge>) {
 export const balanceNodeTypes = { balance: BalanceNodeView };
 export const balanceEdgeTypes = { bstream: BalanceEdgeView };
 
-const KINDS: readonly string[] = ['source', 'sink', 'column', 'mixer', 'splitter', 'exchanger', 'unit'];
+const KINDS: readonly string[] = Object.keys(KIND_LABEL);
 
 export function BalanceCanvas() {
   const { nodes, edges, onNodesChange, onEdgesChange, onConnect, isValidConnection, addUnit } = useBalance(

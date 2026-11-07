@@ -6,6 +6,16 @@
 
 export const KU: Record<string, string> = {
   // navigation & shell
+  "distillate": "distîlat",
+  "bottoms": "bin",
+  "vapour": "hilm",
+  "liquid": "şile",
+  "concentrate": "konsantre",
+  "extract": "ekstrakt",
+  "raffinate": "rafînat",
+  "crystals": "krîstal",
+  "Flow and composition unchanged": "Herikîn û pêkhate naguherin",
+  "Extractor": "Ekstraktor",
   "Balance task": "Erka hevsengiyê",
   "BALANCE TASK": "ERKA HEVSENGIYÊ",
   "Simulation": "Sîmulasyon",

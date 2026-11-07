@@ -21,7 +21,7 @@ import { createJSONStorage, persist, type StateStorage } from 'zustand/middlewar
 import { analyseColumns, type ColumnAnalysis } from '@/engine/balance/columns';
 import { thfPressureSwing } from '@/engine/balance/examples';
 import { solveBalance } from '@/engine/balance/solver';
-import type { BalanceResult, BPort, BProblem, BUnitKind, ColumnSettings } from '@/engine/balance/types';
+import { THERMAL, type BalanceResult, type BPort, type BProblem, type BUnitKind, type ColumnSettings } from '@/engine/balance/types';
 import { t } from '@/i18n';
 
 export type BNodeData = {
@@ -114,10 +114,20 @@ function example(): Pick<BalanceState, 'components' | 'nodes' | 'edges'> {
 const PREFIX: Record<BUnitKind, string> = {
   source: 'Feed',
   sink: 'Product',
-  column: 'Column',
   mixer: 'Mixer',
   splitter: 'Splitter',
-  exchanger: 'Heat exchanger',
+  heater: 'Heater',
+  cooler: 'Cooler',
+  exchanger: 'Cooler',
+  pump: 'Pump',
+  valve: 'Valve',
+  column: 'Column',
+  flash: 'Flash drum',
+  evaporator: 'Evaporator',
+  absorber: 'Absorber',
+  extractor: 'Extractor',
+  crystallizer: 'Crystallizer',
+  dryer: 'Dryer',
   unit: 'Unit',
 };
 
@@ -165,7 +175,7 @@ export const useBalance = create<BalanceState>()(
         const name = freeName(names, `${t(PREFIX[kind])} `);
         const data: BNodeData = { kind, name };
         if (kind === 'column') data.column = { ...DEFAULT_COLUMN };
-        if (kind === 'exchanger') {
+        if (THERMAL.includes(kind)) {
           data.Q = null;
           data.dHv = null;
         }
