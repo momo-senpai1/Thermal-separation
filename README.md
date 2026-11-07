@@ -99,6 +99,35 @@ Drag any unit from the palette onto the canvas and wire it up:
   feed specification, solved by the same engine as its workbench page. The
   inspector edits the block and links to the full module.
 
+### Balance tasks (flowsheet → "Balance task")
+
+Switch the flowsheet from **Simulation** to **Balance task** to work an
+exercise the way it is solved on paper:
+
+1. Draw the process: feeds, products, columns, mixers, splitters, heat
+   exchangers or generic black-box units, joined by streams. A column's top
+   outlet is the distillate, its bottom outlet the bottoms.
+2. Enter what the exercise gives for each stream: ṅ, mole fractions, q. Leave
+   unknowns empty.
+3. The **solution path** solves the problem step by step, typeset with KaTeX.
+   Each step shows the balance, the substituted numbers and the result. The
+   solver (`engine/balance/solver.ts`) uses total and component balances around
+   every unit and around groups of units, so a recycle is solved with an
+   envelope the way it is done by hand. It also uses Σx = 1, equal compositions
+   across splitters and heat exchangers, and the exchanger energy balance
+   ṅ·(q_out − q_in)·Δh_v = Q̇. It reports what is still undetermined and
+   checks every balance at the end.
+4. For stage numbers, enable **McCabe–Thiele** on a column and set the reflux
+   ratio, the condenser type and the equilibrium curve: constant α, your own
+   x–y table, or a preset (`engine/balance/columnMT.ts`). The construction
+   handles several feeds with their own q, a total or partial condenser, and
+   runs below the diagonal when the key component leaves at the bottom.
+
+The bundled example is the RWTH AVT exercise on THF/H₂O/butanediol
+pressure-swing distillation. Its x–y curves were extracted from the vector
+graphics of the exercise sheet. The drawing and the specifications are stored
+in the browser.
+
 ### Theme and languages
 
 - **Light and dark mode:** use the sun/moon button in the header. The first

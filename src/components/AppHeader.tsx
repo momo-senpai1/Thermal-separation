@@ -5,6 +5,7 @@ import { navigate, type Route } from '@/lib/route';
 import { useTheme } from '@/lib/theme';
 import { COMPONENTS } from '@/engine/components';
 import { useFlowsheet } from '@/store/flowsheetStore';
+import { useBalance } from '@/store/balanceStore';
 import { LANGS, t, useLang } from '@/i18n';
 
 type NavItem = { route: Route; label: string };
@@ -66,6 +67,7 @@ function Group({ g, route }: { g: NavGroup; route: Route }) {
 }
 
 export function AppHeader({ route }: { route: Route }) {
+  const mode = useBalance((s) => s.mode);
   return (
     <header className="glass relative z-30 flex h-11 shrink-0 items-center gap-5 px-4">
       <div className="flex items-center gap-2.5">
@@ -89,7 +91,7 @@ export function AppHeader({ route }: { route: Route }) {
       </nav>
 
       <div className="ml-auto flex shrink-0 items-center gap-4">
-        {route === 'flowsheet' && <FlowsheetStatus />}
+        {route === 'flowsheet' && mode === 'sim' && <FlowsheetStatus />}
         <LangSwitch />
         <ThemeToggle />
       </div>

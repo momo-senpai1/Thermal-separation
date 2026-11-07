@@ -2,6 +2,7 @@ import type { DragEvent } from 'react';
 import type { UnitType } from '@/types/process';
 import { MaterialPicker } from './MaterialPicker';
 import { t } from '@/i18n';
+import { ModeSwitch } from '@/components/balance/BalancePalette';
 
 export const DND_MIME = 'application/x-thermal-unit';
 
@@ -100,6 +101,7 @@ export function Palette() {
 
   return (
     <aside className="glass flex w-60 shrink-0 flex-col overflow-y-auto">
+      <ModeSwitch />
       <MaterialPicker />
       <div className="border-b border-white/[0.05] px-3 py-2.5">
         <p className="tag text-plant-400">{t('Equipment')}</p>

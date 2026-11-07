@@ -6,6 +6,11 @@ import { FlowCanvas } from '@/components/FlowCanvas';
 import { Inspector } from '@/components/Inspector';
 import { Palette } from '@/components/Palette';
 import { useRoute } from '@/lib/route';
+import { BalanceCanvas } from '@/components/balance/BalanceGraph';
+import { BalanceInspector } from '@/components/balance/BalanceInspector';
+import { BalancePalette } from '@/components/balance/BalancePalette';
+import { BalanceResults } from '@/components/balance/BalanceResults';
+import { useBalance } from '@/store/balanceStore';
 import { useLang } from '@/i18n';
 
 const McCabeThielePage = lazy(() => import('@/pages/McCabeThielePage'));
@@ -22,12 +27,22 @@ export default function App() {
   const { route, params } = useRoute();
   // re-render the whole tree when the language changes; plain t() calls read the store directly
   const lang = useLang((s) => s.lang);
+  const mode = useBalance((s) => s.mode);
   return (
     <ReactFlowProvider>
       <div key={lang} className="relative flex h-full flex-col gap-2 p-2">
         <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_at_top,rgb(var(--sig-liquid)/0.06),transparent_60%)]" />
         <AppHeader route={route} />
-        {route === 'flowsheet' ? (
+        {route === 'flowsheet' && mode === 'task' ? (
+          <main className="relative flex min-h-0 flex-1 gap-2">
+            <BalancePalette />
+            <div className="flex min-w-0 flex-1 flex-col gap-2">
+              <BalanceCanvas />
+              <BalanceResults />
+            </div>
+            <BalanceInspector />
+          </main>
+        ) : route === 'flowsheet' ? (
           <main className="relative flex min-h-0 flex-1 gap-2">
             <Palette />
             <FlowCanvas />
