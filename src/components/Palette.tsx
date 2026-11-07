@@ -1,6 +1,7 @@
 import type { DragEvent } from 'react';
 import type { UnitType } from '@/types/process';
 import { MaterialPicker } from './MaterialPicker';
+import { t } from '@/i18n';
 
 export const DND_MIME = 'application/x-thermal-unit';
 
@@ -101,13 +102,13 @@ export function Palette() {
     <aside className="glass flex w-60 shrink-0 flex-col overflow-y-auto">
       <MaterialPicker />
       <div className="border-b border-white/[0.05] px-3 py-2.5">
-        <p className="tag text-plant-400">Equipment</p>
-        <p className="mt-0.5 text-[10px] text-plant-500">Drag onto the flowsheet</p>
+        <p className="tag text-plant-400">{t('Equipment')}</p>
+        <p className="mt-0.5 text-[10px] text-plant-500">{t('Drag onto the flowsheet')}</p>
       </div>
       <div className="space-y-2 p-2">
         {GROUPS.map((g) => (
           <div key={g.title}>
-            <p className="tag px-2 pb-1 pt-1 text-plant-500">{g.title}</p>
+            <p className="tag px-2 pb-1 pt-1 text-plant-500">{t(g.title)}</p>
             <ul className="space-y-0.5">
               {g.types.map(byType).map((it) => (
                 <li
@@ -125,8 +126,8 @@ export function Palette() {
               </svg>
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-xs text-plant-200">{it.name}</span>
-              <span className="block truncate text-[10px] text-plant-500">{it.desc}</span>
+              <span className="block text-xs text-plant-200">{t(it.name)}</span>
+              <span className="block truncate text-[10px] text-plant-500">{t(it.desc)}</span>
             </span>
             <span className="tag text-plant-500">{it.tag}</span>
           </li>
@@ -150,7 +151,7 @@ function Legend({ color, label }: { color: string; label: string }) {
   return (
     <div className="flex items-center gap-2">
       <span className="h-[3px] w-4 rounded-full" style={{ background: color }} />
-      <span className="font-mono">{label}</span>
+      <span className="font-mono">{t(label)}</span>
     </div>
   );
 }

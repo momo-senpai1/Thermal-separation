@@ -83,6 +83,35 @@ an activity model the column and batch still step on the real equilibrium
 curve (tangent-pinch R_min, total-reflux N_min, azeotrope limit). A **flash
 drum** unit (heat duty + drum pressure) is available in the palette.
 
+### Flowsheet equipment
+
+Drag any unit from the palette onto the canvas and wire it up:
+
+- **Streams:** feed, mixer, splitter (fraction to outlet 1).
+- **Heat & pressure:** heater, cooler/condenser (duty Q < 0), pump
+  (W = V̇·Δp/η from liquid densities), valve (isenthalpic let-down, flashes if
+  the outlet crosses the bubble point).
+- **Separation:** column (trays with an overall efficiency or packing with an
+  HETP — the node shows real trays or packed height), flash drum, evaporator
+  (set the vaporized fraction, the duty is computed), batch still.
+- **Process blocks:** absorber/stripper, extraction column, multiple-effect
+  evaporator, crystallizer and dryer. Each one is a standalone block with its own
+  feed specification, solved by the same engine as its workbench page. The
+  inspector edits the block and links to the full module.
+
+### Theme and languages
+
+- **Light and dark mode:** use the sun/moon button in the header. The first
+  visit follows the operating system; the choice is then stored in the browser.
+  All colours, including chart colours, are CSS variables (`src/index.css`).
+- **English, German and Kurdish (Kurmanji, Latin script):** use the EN / DE / KU
+  switch in the header. Strings are keyed by their English text (`src/i18n/`).
+  Missing entries fall back to English, and chemical names inside longer labels
+  are translated term by term. Navigation, panels, controls, palette, inspector
+  and equipment names are translated. Longer explanatory paragraphs are still in
+  English. The Kurdish wording needs review by a native speaker; corrections go
+  in `src/i18n/ku.ts`.
+
 ### Unit operations
 
 - **Absorption / stripping** (`engine/absorption.ts`): Henry constants for NH₃,

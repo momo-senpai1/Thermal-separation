@@ -1,5 +1,6 @@
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
+import { t } from '@/i18n';
 
 interface ParamSliderProps {
   label: string;
@@ -37,7 +38,7 @@ export function ParamSlider({
       <div className="flex items-baseline justify-between">
         <label className="text-[11px] text-plant-300">
           <span className="mr-1.5 font-mono text-plant-500">{symbol}</span>
-          {label}
+          {t(label)}
           {computed && (
             <span className="ml-1.5 rounded-sm border border-white/10 px-1 font-mono text-[8px] uppercase tracking-wider text-plant-400">
               calc

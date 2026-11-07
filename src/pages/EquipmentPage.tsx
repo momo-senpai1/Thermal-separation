@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { EquipmentCard } from '@/components/equipment/EquipmentCards';
 import { EQUIPMENT, TOPICS, type Topic } from '@/content/equipment';
 import { cn } from '@/lib/utils';
+import { t as tr } from '@/i18n';
 
 export default function EquipmentPage({ params }: { params: URLSearchParams }) {
   const initial = TOPICS.some((t) => t.id === params.get('topic')) ? (params.get('topic') as Topic) : null;
@@ -17,8 +18,8 @@ export default function EquipmentPage({ params }: { params: URLSearchParams }) {
             Where the app can calculate it, the card links straight there.
           </p>
         </div>
-        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter by topic">
-          {[{ id: null as Topic | null, label: `All (${EQUIPMENT.length})` }, ...TOPICS.map((t) => ({ id: t.id as Topic | null, label: t.label }))].map((t) => (
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label={tr('Filter by topic')}>
+          {[{ id: null as Topic | null, label: `${tr('All')} (${EQUIPMENT.length})` }, ...TOPICS.map((t) => ({ id: t.id as Topic | null, label: t.label }))].map((t) => (
             <button
               key={t.label}
               type="button"
@@ -29,14 +30,14 @@ export default function EquipmentPage({ params }: { params: URLSearchParams }) {
                 topic === t.id ? 'border-signal-liquid/50 bg-signal-liquid/10 text-signal-liquid' : 'border-white/[0.07] text-plant-300 hover:text-plant-100',
               )}
             >
-              {t.label}
+              {tr(t.label)}
             </button>
           ))}
         </div>
       </div>
       {(topic ? TOPICS.filter((t) => t.id === topic) : TOPICS).map((t) => (
         <section key={t.id} className="space-y-2">
-          <p className="tag px-1 pt-1 text-plant-400">{t.label}</p>
+          <p className="tag px-1 pt-1 text-plant-400">{tr(t.label)}</p>
           <div className="grid gap-2 md:grid-cols-2 2xl:grid-cols-3">
             {list.filter((e) => e.topic === t.id).map((e) => (
               <EquipmentCard key={e.id} e={e} />

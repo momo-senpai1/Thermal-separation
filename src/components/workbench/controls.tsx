@@ -1,12 +1,13 @@
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
+import { t, tx } from '@/i18n';
 
 export function Panel({ title, children, className, aside }: { title?: string; children: ReactNode; className?: string; aside?: ReactNode }) {
   return (
     <section className={cn('glass p-3', className)}>
       {title && (
         <div className="mb-3 flex items-center justify-between gap-2 border-b border-white/[0.05] pb-1.5">
-          <p className="tag text-plant-400">{title}</p>
+          <p className="tag text-plant-400">{t(title)}</p>
           {aside}
         </div>
       )}
@@ -18,7 +19,7 @@ export function Panel({ title, children, className, aside }: { title?: string; c
 export function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div role="group" aria-label={label} className="space-y-1.5">
-      <span className="tag block text-plant-500">{label}</span>
+      <span className="tag block text-plant-500">{t(label)}</span>
       {children}
     </div>
   );
@@ -45,7 +46,7 @@ export function Select<T extends string>({
       >
         {options.map((o) => (
           <option key={o.id} value={o.id} className="bg-plant-900">
-            {o.label}
+            {t(o.label)}
           </option>
         ))}
       </select>
@@ -65,7 +66,7 @@ export function Toggle({ checked, onChange, label }: { checked: boolean; onChang
         onChange={(e) => onChange(e.target.checked)}
         className="h-3.5 w-3.5 cursor-pointer appearance-none rounded-[3px] border border-white/20 bg-plant-950 transition-colors checked:border-signal-liquid checked:bg-signal-liquid focus-visible:outline focus-visible:outline-1 focus-visible:outline-signal-liquid"
       />
-      {label}
+      {t(label)}
     </label>
   );
 }
@@ -87,12 +88,12 @@ export function Kpi({
 }) {
   return (
     <div className="glass min-w-0 px-3 py-2.5">
-      <p className="tag truncate text-plant-500">{label}</p>
+      <p className="tag truncate text-plant-500">{t(label)}</p>
       <p className={cn('readout mt-0.5 truncate', small ? 'py-1 text-sm' : 'text-lg', tone === 'muted' ? 'text-plant-500' : 'text-plant-100')}>
         {value}
         {unit && <span className="ml-1 text-[10px] text-plant-500">{unit}</span>}
       </p>
-      {sub && <div className="mt-0.5 truncate font-mono text-[10px] text-plant-400">{sub}</div>}
+      {sub && <div className="mt-0.5 truncate font-mono text-[10px] text-plant-400">{tx(sub)}</div>}
     </div>
   );
 }

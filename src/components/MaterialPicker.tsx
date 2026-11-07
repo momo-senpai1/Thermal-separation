@@ -4,6 +4,7 @@ import { COMPONENTS, type ComponentId } from '@/engine/components';
 import { PACKAGE_COMPONENTS, packageNote, pairModel } from '@/engine/propertyPackage';
 import { cn } from '@/lib/utils';
 import { useFlowsheet } from '@/store/flowsheetStore';
+import { t } from '@/i18n';
 
 const OPTIONS = PACKAGE_COMPONENTS.map((id) => ({ id, label: COMPONENTS[id].name }));
 
@@ -28,7 +29,7 @@ export function MaterialPicker() {
 
   return (
     <div className="space-y-2 border-b border-white/[0.05] p-3">
-      <p className="tag text-plant-400">Feed materials</p>
+      <p className="tag text-plant-400">{t('Feed materials')}</p>
       <div className="grid grid-cols-2 gap-1.5">
         <Select value={draft.a} options={OPTIONS} onChange={(v) => pick(v, draft.b)} ariaLabel="First feed component" />
         <Select value={draft.b} options={OPTIONS} onChange={(v) => pick(draft.a, v)} ariaLabel="Second feed component" />

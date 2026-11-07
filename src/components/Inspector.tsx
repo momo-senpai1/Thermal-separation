@@ -8,6 +8,7 @@ import { navigate } from '@/lib/route';
 import { cn, cToK, fmt, kToC } from '@/lib/utils';
 import { DEFAULT_FEED, useFlowsheet, type StreamEdge, type UnitNode } from '@/store/flowsheetStore';
 import type { CondenserType, Diagnostics, FeedSpec, StreamConditions } from '@/types/process';
+import { t } from '@/i18n';
 
 export function Inspector() {
   const node = useFlowsheet((s) => s.nodes.find((n) => n.selected));
@@ -16,9 +17,9 @@ export function Inspector() {
   return (
     <aside className="glass flex w-72 shrink-0 flex-col overflow-hidden">
       <div className="border-b border-white/[0.05] px-3 py-2.5">
-        <p className="tag text-plant-400">Inspector</p>
+        <p className="tag text-plant-400">{t('Inspector')}</p>
         <p className="mt-0.5 truncate text-[10px] text-plant-500">
-          {node ? `${node.data.tag} · ${node.data.label}` : edge ? `Stream ${edge.data?.tag}` : 'Select a unit or stream'}
+          {node ? `${node.data.tag} · ${t(node.data.label)}` : edge ? `${t('Stream')} ${edge.data?.tag}` : t('Select a unit or stream')}
         </p>
       </div>
       <div className="flex-1 space-y-5 overflow-y-auto p-3">
@@ -40,7 +41,7 @@ export function Inspector() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="space-y-3">
-      <p className="tag border-b border-white/[0.04] pb-1 text-plant-500">{title}</p>
+      <p className="tag border-b border-white/[0.04] pb-1 text-plant-500">{t(title)}</p>
       {children}
     </section>
   );
@@ -432,7 +433,7 @@ function OpenButton({ label, onClick }: { label: string; onClick: () => void }) 
       onClick={onClick}
       className="w-full rounded-md border border-signal-liquid/40 bg-signal-liquid/[0.07] py-1.5 text-[11px] text-signal-liquid transition-colors hover:bg-signal-liquid/15"
     >
-      {label} →
+      {t(label)} →
     </button>
   );
 }
@@ -471,7 +472,7 @@ function StreamPanel({ edge }: { edge: StreamEdge }) {
 function Empty() {
   return (
     <div className="space-y-2 text-[11px] leading-relaxed text-plant-500">
-      <p>Click a unit to edit its parameters, or a stream to read its conditions.</p>
+      <p>{t('Click a unit to edit its parameters, or a stream to read its conditions.')}</p>
       <p className="font-mono text-[10px]">⌫ delete · drag handle → handle to connect · scroll to zoom</p>
     </div>
   );
