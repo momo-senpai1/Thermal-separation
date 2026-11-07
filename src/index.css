@@ -169,3 +169,12 @@
 html.light .glass {
   box-shadow: 0 0 0 1px rgb(15 23 42 / 0.05), 0 8px 24px -14px rgb(15 23 42 / 0.25);
 }
+
+/* compact, left-aligned display formulas in the solution path */
+.tex-block .katex-display {
+  margin: 0.1em 0;
+  text-align: left;
+}
+.tex-block .katex-display > .katex {
+  text-align: left;
+}
